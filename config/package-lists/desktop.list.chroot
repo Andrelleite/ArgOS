@@ -28,3 +28,13 @@ gvfs-fuse
 # live image ships with.
 calamares
 calamares-settings-debian
+
+# Always-on system metrics panel widgets (CPU/RAM/network/temperature).
+# These are also in kali-desktop-xfce's own Recommends, but
+# --apt-recommends false drops them, so listed explicitly. lm-sensors is
+# what xfce4-sensors-plugin actually reads temperature data from.
+xfce4-cpugraph-plugin
+xfce4-systemload-plugin
+xfce4-netload-plugin
+xfce4-sensors-plugin
+lm-sensors

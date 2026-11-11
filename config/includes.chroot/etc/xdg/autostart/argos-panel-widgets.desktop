@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ArgOS Panel Widgets
+Comment=Adds CPU/RAM/network/temperature widgets to the panel (once)
+Exec=/usr/local/bin/argos-setup-panel-widgets
+Icon=utilities-system-monitor
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=XFCE;

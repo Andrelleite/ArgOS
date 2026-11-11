@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+#
+# Adds always-visible CPU/RAM/network/temperature widgets to the Xfce
+# panel, using xfce4-panel's own `--add=<plugin>` mechanism rather than
+# a hand-authored xfconf XML -- the exact panel/plugin-ID schema is
+# fragile and version-dependent, and this uses the panel's own real
+# provisioning path instead of guessing it.
+#
+# Plugin internal names (cpugraph, netload, systemload,
+# xfce4-sensors-plugin) are taken directly from each package's shipped
+# /usr/share/xfce4/panel/plugins/*.desktop filename, not assumed.
+#
+# Guarded by a marker file: this only runs once ever (per user), since
+# re-running `--add=` on every login would pile up duplicate plugin
+# instances on the panel instead of just being a harmless no-op.
+#
+# Run via /etc/xdg/autostart/ at Xfce session start, same as
+# argos-set-wallpaper.
+
+MARKER="${HOME}/.config/argos/.panel-widgets-configured"
+
+if [ -f "$MARKER" ]; then
+    exit 0
+fi
+
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    xfconf-query -c xfce4-panel -p /panels -l >/dev/null 2>&1 && break
+    sleep 1
+done
+
+for plugin in cpugraph systemload netload xfce4-sensors-plugin; do
+    xfce4-panel --add="$plugin" 2>/dev/null || true
+done
+
+mkdir -p "$(dirname "$MARKER")"
+touch "$MARKER"

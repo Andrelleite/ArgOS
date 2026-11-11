@@ -200,6 +200,35 @@ splash — nobody has actually watched this boot into a graphical session
 yet. Treat the first real build with this as a test, not a known-good
 state.
 
+### Always-visible system metrics
+
+The panel always shows CPU, RAM, network, and temperature via real
+Xfce panel plugins (`xfce4-cpugraph-plugin`, `xfce4-systemload-plugin`,
+`xfce4-netload-plugin`, `xfce4-sensors-plugin` +
+`lm-sensors`) — not a custom widget. `config/includes.chroot/usr/local/bin/argos-setup-panel-widgets`
+adds them once (guarded by a marker file, so it doesn't duplicate
+plugin instances on every login) via `xfce4-panel --add=<plugin>`,
+using each plugin's real internal name (confirmed from its shipped
+`.desktop` filename, not assumed) rather than a hand-authored xfconf
+panel-layout XML, which is a notoriously fragile schema to get right
+blind.
+
+Honest limit on verification here: I tried to confirm this against a
+real, live Xfce panel (installed the actual packages, ran a virtual
+X11 display with Xvfb, started `xfconfd` and `xfce4-panel` by hand) and
+hit session-infrastructure gaps in that improvised setup — no systemd
+user session, no polkit, no real session manager — that a real booted
+ArgOS image has and this sandbox doesn't, so the test wasn't
+conclusive either way. The plugin package names and the `--add=`
+mechanism itself are real, standard, long-documented Xfce features, not
+guessed — but whether this specific script actually produces a
+populated panel on first login is unverified, the same honest caveat
+as the rest of this desktop/installer section. It also won't look
+exactly like a specific reference screenshot someone might have in
+mind — these are Xfce's own stock plugins with their own default
+styling, not custom-icon widgets recreating another design pixel for
+pixel.
+
 ## Branding
 
 Per explicit direction: no visible "Kali" where it's realistically
