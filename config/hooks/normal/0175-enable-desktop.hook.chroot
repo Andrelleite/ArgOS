@@ -8,6 +8,16 @@ if systemctl list-unit-files lightdm.service >/dev/null 2>&1; then
     systemctl enable lightdm.service
 fi
 
+# Enabling lightdm.service alone isn't enough: it's WantedBy=
+# graphical.target, which only gets reached if that's actually the
+# boot target. A bare live/base system defaults to multi-user.target
+# (plain console) regardless of what's installed -- nothing flips this
+# automatically just because a desktop environment is present. Without
+# this, lightdm never starts and the system boots straight to a TTY
+# login, which is exactly what happened the first time this image was
+# actually booted.
+systemctl set-default graphical.target
+
 # Xfce/Thunar treat a freshly-placed .desktop file as untrusted until
 # it's executable -- without this, double-clicking the install icon
 # shows an "Untrusted application launcher" warning first.

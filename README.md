@@ -343,13 +343,18 @@ uses — real partitioning, disk encryption options, locale/timezone, and
 actual user-account creation, replacing the fixed `argos`/`argos` login
 with whatever the person installing picks.
 
-This is new and unverified end-to-end: every package name here was
-checked against Kali's live repository the same as everywhere else in
-this repo, and the `lightdm`/Calamares configuration follows standard,
-widely-used patterns, but — unlike the CLI tooling and the boot
-splash — nobody has actually watched this boot into a graphical session
-yet. Treat the first real build with this as a test, not a known-good
-state.
+**Update from an actual boot**: the first real build of this booted to
+a plain TTY console instead of the graphical session — `lightdm.service`
+was enabled, but nothing had set the system's default *boot target* to
+`graphical.target`. A live/base system defaults to `multi-user.target`
+(console) regardless of what's installed; enabling a display manager
+only matters once `graphical.target` is actually what's being booted
+to. Fixed with `systemctl set-default graphical.target` in
+`0175-enable-desktop.hook.chroot`. Everything else that boot
+confirmed working correctly: autologin as `argos`, the custom MOTD/
+`argosd` warning, the hostname, and — notably — zsh with Powerlevel10k
+rendering correctly, which had been one of the least-verified pieces
+going in.
 
 ### Always-visible system metrics
 
