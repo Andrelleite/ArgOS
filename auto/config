@@ -21,9 +21,15 @@ set -e
 # stable across packagings/releases. If this errors on a different
 # live-build version, re-check with `lb config -u`.
 #
-# --security/--updates exist in this version but are left unset: they add
-# a Debian-style stable+security/updates suite split, which doesn't apply
-# to kali-rolling's single rolling suite.
+# --security/--updates are explicitly set to false, not just left unset:
+# they default to TRUE in this live-build, and when true it constructs
+# "${distribution}-security"/"${distribution}-updates" as extra apt
+# sources (functions/sourcelist.sh) -- i.e. "kali-rolling-security" and
+# "kali-rolling-updates", neither of which exist on Kali's mirrors, since
+# kali-rolling is a single rolling suite with no such split. Leaving
+# these on their default produces exactly that apt error at build time
+# ("does not have a Release file"); confirmed by actually tracing
+# sourcelist.sh and reproducing the real error here before fixing it.
 
 lb config noauto \
     --distribution "kali-rolling" \
@@ -44,6 +50,8 @@ lb config noauto \
     --firmware-binary true \
     --linux-packages "linux-image" \
     --debian-installer none \
+    --security false \
+    --updates false \
     --iso-volume "ArgOS" \
     --iso-application "ArgOS" \
     --iso-publisher "ArgOS" \

@@ -3,6 +3,7 @@
 /chroot*
 /cache/
 /.build/
+/.lock
 *.iso
 *.img
 *.zsync
