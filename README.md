@@ -150,19 +150,23 @@ sudo systemctl enable --now ssh.service
 
 ## Boot splash
 
-Plymouth shows a static logo (no animation) centered on a flat near-black
-background, via Plymouth's `script` module
-(`config/includes.chroot/usr/share/plymouth/themes/argos/`): a 7-line
-script that sets the background color, places the logo sprite once, and
-never touches it again (no `Plymouth.SetRefreshFunction()` callback, which
-is what every animated theme uses to update frames). `script.so` ships in
-Kali's base `plymouth` package, confirmed by extracting the real `.deb`
-rather than assumed — unlike `image` (not a real module at all here) and
-`two-step` (real, but only via the separate `plymouth-themes` package,
-and its own shipped themes don't demonstrate a static-only config worth
-trusting blind). The script syntax itself (`Window.SetBackgroundTopColor`,
-`Image()`, `Sprite()`, `sprite.SetX/SetY/SetOpacity`) is copied from
-Kali's own shipped `script` example theme, not written from memory.
+Plymouth shows a static logo centered on a flat near-black background,
+with a real boot-progress bar underneath it, via Plymouth's `script`
+module (`config/includes.chroot/usr/share/plymouth/themes/argos/`). The
+logo itself is placed once and never touched again (no
+`Plymouth.SetRefreshFunction()` callback, which is what every purely
+decorative animated theme uses to update frames) — only the progress bar
+updates, driven by `Plymouth.SetBootProgressFunction()`, the real
+boot-progress callback every script-based theme uses, not a generic timed
+animation. `script.so` ships in Kali's base `plymouth` package, confirmed
+by extracting the real `.deb` rather than assumed — unlike `image` (not a
+real module at all here) and `two-step` (real, but only via the separate
+`plymouth-themes` package, and its own shipped themes don't demonstrate a
+static-only config worth trusting blind). Both the static-logo and
+progress-bar script patterns are adapted from Kali's own shipped `script`
+example theme (`/usr/share/plymouth/themes/script/script.script`), not
+written from memory. The progress bar's fill color is sampled directly
+from the logo's own red (`#cf1324`), not picked by eye.
 
 The same logo is reused as a GRUB background/theme
 (`config/includes.chroot/boot/grub/themes/argos/`) for the installed
