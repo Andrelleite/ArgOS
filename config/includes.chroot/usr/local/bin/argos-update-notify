@@ -1,0 +1,25 @@
+#!/bin/sh
+set -u
+#
+# argos-update-notify -- runs at desktop login (via autostart, so it
+# naturally has the right DBUS_SESSION_BUS_ADDRESS/DISPLAY for the
+# logged-in user -- no cross-session D-Bus plumbing needed). Just reads
+# the status file argos-update-check already wrote as root and, if
+# anything is upgradable, pops a desktop notification pointing at
+# `argos-update`. Never runs apt itself, never needs privilege.
+
+STATUS_FILE="/var/lib/argos/update-status"
+
+command -v notify-send >/dev/null 2>&1 || exit 0
+[ -r "$STATUS_FILE" ] || exit 0
+
+COUNT=$(head -n1 "$STATUS_FILE" 2>/dev/null)
+case "$COUNT" in
+    ''|*[!0-9]*) exit 0 ;;
+    0) exit 0 ;;
+esac
+
+notify-send -i software-update-available \
+    "ArgOS updates available" \
+    "$COUNT package(s) can be upgraded. Run 'argos-update' in a terminal to review and apply." \
+    2>/dev/null || true

@@ -1,0 +1,60 @@
+#!/bin/sh
+set -u
+#
+# argos-update -- the user-facing half of ArgOS's update checker.
+#
+# With no args: shows what argos-update-check last found (falls back to
+# a fresh check if the status file doesn't exist yet) and, if anything
+# is upgradable, offers to apply it.
+#
+# Applying an upgrade is always an explicit, interactive choice made
+# here -- this is the one place in ArgOS that's allowed to mutate
+# packages, and only after a person confirms it.
+
+STATUS_FILE="/var/lib/argos/update-status"
+
+read_status() {
+    if [ ! -r "$STATUS_FILE" ]; then
+        return 1
+    fi
+    head -n1 "$STATUS_FILE" 2>/dev/null | grep -qE '^[0-9]+$'
+}
+
+if ! read_status; then
+    echo "No update check has run yet -- checking now (needs sudo)..."
+    if ! sudo /usr/local/bin/argos-update-check; then
+        echo "argos-update: check failed" >&2
+        exit 1
+    fi
+fi
+
+COUNT=$(head -n1 "$STATUS_FILE")
+PACKAGES=$(tail -n +2 "$STATUS_FILE" | grep -v '^$' || true)
+
+if [ "$COUNT" -eq 0 ] 2>/dev/null; then
+    echo "ArgOS is up to date."
+    exit 0
+fi
+
+echo "$COUNT package(s) can be upgraded:"
+echo "$PACKAGES" | sed 's/^/  /'
+echo
+
+printf 'Apply this upgrade now? [y/N] '
+read -r REPLY
+case "$REPLY" in
+    y|Y|yes|YES)
+        ;;
+    *)
+        echo "Not upgrading. Re-run 'argos-update' any time."
+        exit 0
+        ;;
+esac
+
+sudo apt-get update
+sudo apt-get -y full-upgrade
+
+# Refresh the status file immediately so the panel/notifier don't keep
+# reporting stale "N upgradable" until tomorrow's timer run.
+sudo /usr/local/bin/argos-update-check
+echo "Done."

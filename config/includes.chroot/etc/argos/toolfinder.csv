@@ -135,3 +135,4 @@ encrypted usb persistence;live persistence setup,argos-setup-persistence,system,
 check tools are working;tool health check,argos-selftest,system,Smoke-tests installed tools for breakage (ArgOS's own tool)
 triage scan results;prioritize findings;ai summary,argos-triage,system,Parses nmap output and ranks findings by severity, optional AI summary (ArgOS's own tool)
 default password warning;hardening daemon,argosd,system,Watches for the default password/exposed-sshd combo (ArgOS's own tool)
+update packages;upgrade system;check for updates;apt update,argos-update,system,Checks for and applies package updates, with confirmation (ArgOS's own tool)

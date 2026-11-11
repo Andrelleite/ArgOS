@@ -1,0 +1,46 @@
+#!/bin/sh
+set -u
+#
+# argos-update-check -- the privileged half of ArgOS's update checker.
+#
+# Runs as root (via argos-update-check.timer), refreshes the apt index,
+# and records how many packages are upgradable -- nothing more. It
+# never installs or removes anything.
+#
+# This is deliberately a check-only replacement for Debian's own
+# apt-daily*.timer units, which 0250-disable-background-timers.hook
+# masks for a different reason: those can silently fetch AND unpack
+# unattended-upgrades on their own schedule, which is exactly the kind
+# of mid-engagement package mutation this project has ruled out
+# everywhere else. Merely knowing an update exists mutates nothing, so
+# this one is left enabled by default -- but the actual upgrade always
+# requires a person to run `argos-update` themselves; nothing here ever
+# calls `apt-get install`/`upgrade`.
+#
+# Result is written to a world-readable status file rather than printed
+# anywhere, because this runs unattended with no one watching stdout --
+# argos-update and the login-time notifier both just read the file.
+
+STATUS_DIR="/var/lib/argos"
+STATUS_FILE="$STATUS_DIR/update-status"
+STATUS_TMP="$STATUS_DIR/.update-status.tmp"
+
+install -d -m 0755 "$STATUS_DIR"
+
+if ! apt-get update -qq >/var/log/argos-update-check.log 2>&1; then
+    echo "argos-update-check: apt-get update failed, see /var/log/argos-update-check.log" >&2
+    exit 1
+fi
+
+# apt list --upgradable prints lines like:
+#   pkgname/suite version arch [upgradable from: oldversion]
+# plus a stderr warning about CLI stability that -qq/2>/dev/null drops.
+UPGRADABLE=$(apt list --upgradable 2>/dev/null | grep -v '^Listing' | cut -d/ -f1)
+COUNT=$(printf '%s\n' "$UPGRADABLE" | grep -c . || true)
+
+{
+    echo "$COUNT"
+    printf '%s\n' "$UPGRADABLE"
+} > "$STATUS_TMP"
+mv -f "$STATUS_TMP" "$STATUS_FILE"
+chmod 0644 "$STATUS_FILE"

@@ -524,6 +524,45 @@ Ad-hoc `nft add rule` changes don't persist across reboots — the
 ruleset reloads fresh from `/etc/nftables.conf` every time, so add
 anything you want to keep to that file directly.
 
+## Updates
+
+Kali ships Debian's own `apt-daily.timer`/`apt-daily-upgrade.timer`,
+which ArgOS masks
+(`config/hooks/normal/0250-disable-background-timers.hook.chroot`)
+because they can fetch *and unpack* `unattended-upgrades` on their own
+schedule — silently mutating installed packages mid-engagement, which
+this project rules out everywhere else (see Performance choices). That
+left ArgOS with no update mechanism at all, which isn't the right
+tradeoff either — "no updates" and "silent updates" are both wrong;
+what's missing is a checker that only *notifies*.
+
+ArgOS has one now, split into a privileged half and an unprivileged
+half, so the two risk profiles stay separate:
+
+- **`argos-update-check.timer`** (daily, enabled by default) runs
+  `argos-update-check` as root: refreshes the apt index and counts
+  upgradable packages into a world-readable status file
+  (`/var/lib/argos/update-status`). This is genuinely safe to leave
+  enabled — unlike `apt-daily-upgrade.timer`, it never calls
+  `apt-get install`/`upgrade` itself, so it can't mutate anything.
+- **`argos-update-notify`** runs at Xfce login (`/etc/xdg/autostart/`,
+  same pattern as the wallpaper/panel-widget autostart entries) as the
+  logged-in user, not root. It only reads that status file and pops a
+  `notify-send` desktop notification if something's upgradable —
+  pointing at `argos-update`, never applying anything itself. Running
+  it at login rather than as a root service avoids the usual
+  root-service-talking-into-a-user's-D-Bus-session problem entirely.
+- **`argos-update`** is the one place in ArgOS allowed to actually
+  change packages, and only interactively: it shows what's upgradable
+  (running a fresh check itself if none has happened yet), asks for
+  explicit `y`/`N` confirmation, and only then runs
+  `apt-get update && apt-get full-upgrade`.
+
+`notify-send` needed `libnotify-bin` added explicitly to
+`desktop.list.chroot` — `xfce4-notifyd` (which ArgOS already installs)
+only pulls in `libnotify4`, the runtime *library*; the CLI binary is a
+separate package and doesn't come along for free.
+
 ## Boot splash
 
 Plymouth shows a static logo centered on a flat near-black background,

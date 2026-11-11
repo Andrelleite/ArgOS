@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ArgOS Update Notifier
+Comment=Notifies if ArgOS package updates are available (read-only, never installs)
+Exec=/usr/local/bin/argos-update-notify
+Icon=software-update-available
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=XFCE;

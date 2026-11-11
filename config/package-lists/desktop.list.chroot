@@ -44,3 +44,9 @@ lm-sensors
 # making them the defaults, not just installed).
 chromium
 terminator
+
+# notify-send (the update checker's login-time notifier uses this).
+# xfce4-notifyd itself depends on libnotify4, the runtime *library* --
+# that's not the same package as this, the CLI binary, so it needs
+# listing explicitly rather than assuming it rides along.
+libnotify-bin

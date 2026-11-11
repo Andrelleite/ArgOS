@@ -1,0 +1,8 @@
+[Unit]
+Description=ArgOS update check (refreshes apt index, counts upgradable packages -- never installs anything)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/argos-update-check

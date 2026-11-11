@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+# Check-only update notifier, left enabled by default -- see the long
+# comment in argos-update-check for why this is a different risk
+# profile than the apt-daily*.timer units 0250 masks: this one only
+# refreshes the apt index and counts upgradable packages, it never
+# calls install/upgrade on its own. The actual upgrade always requires
+# a person to run `argos-update` and confirm it themselves.
+
+chmod 0755 /usr/local/bin/argos-update-check
+chmod 0755 /usr/local/bin/argos-update
+chmod 0755 /usr/local/bin/argos-update-notify
+
+systemctl enable argos-update-check.timer
