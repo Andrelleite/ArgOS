@@ -1,0 +1,18 @@
+# Digital forensics -- CLI only.
+# Explicitly excluded: autopsy (GUI front-end for sleuthkit). sleuthkit
+# itself is the CLI toolset autopsy is built on.
+
+sleuthkit
+testdisk
+foremost
+scalpel
+binwalk
+bulk-extractor
+exiftool
+ewf-tools
+afflib-tools
+dc3dd
+dcfldd
+libewf-utils
+yara
+volatility3

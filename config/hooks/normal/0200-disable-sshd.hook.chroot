@@ -1,0 +1,32 @@
+#!/bin/sh
+set -e
+
+# openssh-server is installed (base package list) but must not listen out
+# of the box: the live image ships a known default password, so an
+# auto-starting sshd would be an immediate remote-login risk on untrusted
+# networks. Leave the service installed and fully configured, just masked.
+
+systemctl disable ssh.service 2>/dev/null || true
+systemctl mask ssh.service 2>/dev/null || true
+
+# Regenerate host keys on every boot instead of baking fixed keys into the
+# image/every installed copy -- belt and suspenders for when a user does
+# turn sshd on later.
+rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub
+
+cat > /etc/systemd/system/ssh-hostkeys-regen.service <<'EOF'
+[Unit]
+Description=Regenerate missing SSH host keys
+Before=ssh.service
+ConditionFileIsExecutable=/usr/bin/ssh-keygen
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ssh-keygen -A
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable ssh-hostkeys-regen.service

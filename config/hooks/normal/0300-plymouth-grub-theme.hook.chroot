@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+# Activate the ArgOS Plymouth theme (static logo, no animation) and bake it
+# into initramfs so it's actually what shows at boot.
+if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    plymouth-set-default-theme -R argos
+else
+    update-initramfs -u
+fi
+
+# Apply the same static logo as a GRUB background/theme for the installed
+# system's boot menu. The theme files themselves ship via
+# config/includes.chroot/boot/grub/themes/argos/; this just points GRUB at
+# them and regenerates grub.cfg.
+install -d -m 0755 /etc/default/grub.d
+cat > /etc/default/grub.d/argos-theme.cfg <<'EOF'
+GRUB_THEME="/boot/grub/themes/argos/theme.txt"
+GRUB_GFXMODE=1024x768
+GRUB_GFXPAYLOAD_LINUX=keep
+GRUB_TIMEOUT=5
+EOF
+
+if command -v update-grub >/dev/null 2>&1; then
+    update-grub || true
+fi

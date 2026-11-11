@@ -1,0 +1,15 @@
+# Reverse engineering -- CLI only.
+# Explicitly excluded: ghidra, cutter (both GUI). radare2/gdb/objdump below
+# cover disassembly, debugging, and binary analysis from the terminal.
+
+radare2
+gdb
+gdbserver
+binutils
+elfutils
+strace
+ltrace
+upx-ucl
+checksec
+ropgadget
+file

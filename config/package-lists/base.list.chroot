@@ -1,0 +1,86 @@
+# ArgOS base system: shell, terminal, networking, boot. No desktop
+# environment and no display manager -- this boots straight to a console
+# login/shell, never Xfce/lightdm.
+
+kali-archive-keyring
+
+# Kernel / boot / live infrastructure
+linux-image-amd64
+firmware-linux
+firmware-iwlwifi
+firmware-realtek
+live-boot
+live-config
+live-config-systemd
+grub-pc
+grub-efi-amd64-bin
+plymouth
+os-prober
+parted
+gdisk
+dosfstools
+e2fsprogs
+ntfs-3g
+exfatprogs
+cryptsetup
+lvm2
+
+# Shell / terminal environment
+bash
+bash-completion
+zsh
+tmux
+screen
+vim
+nano
+less
+man-db
+locales
+console-setup
+keyboard-configuration
+sudo
+dialog
+whiptail
+
+# Core CLI utilities
+coreutils
+findutils
+grep
+sed
+gawk
+curl
+wget
+git
+rsync
+htop
+tree
+unzip
+zip
+p7zip-full
+jq
+ripgrep
+
+# Networking stack (CLI only)
+iproute2
+net-tools
+isc-dhcp-client
+network-manager
+wpasupplicant
+wireless-tools
+iw
+usbutils
+pciutils
+openssh-client
+openssh-server
+dnsutils
+traceroute
+netcat-traditional
+socat
+proxychains4
+tcpdump
+
+# System services
+systemd-timesyncd
+apt-transport-https
+ca-certificates
+gnupg

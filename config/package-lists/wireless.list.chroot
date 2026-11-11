@@ -1,0 +1,13 @@
+# Wireless attacks -- CLI only.
+# Explicitly excluded: zenmap (GUI nmap front-end, listed here since it's
+# wireless/recon-adjacent in some package sets -- not installed anywhere).
+
+aircrack-ng
+reaver
+bully
+wifite
+mdk4
+pixiewps
+cowpatty
+kismet
+macchanger

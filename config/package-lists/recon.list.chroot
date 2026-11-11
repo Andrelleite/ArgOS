@@ -1,0 +1,25 @@
+# Reconnaissance / information gathering -- all CLI.
+
+nmap
+masscan
+amass
+theharvester
+recon-ng
+dnsenum
+dnsrecon
+fierce
+whatweb
+sublist3r
+dirb
+gobuster
+ffuf
+wfuzz
+whois
+smbclient
+smbmap
+enum4linux
+nbtscan
+onesixtyone
+snmp
+ldap-utils
+p0f

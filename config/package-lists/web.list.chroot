@@ -1,0 +1,13 @@
+# Web application testing -- CLI only.
+# Explicitly excluded: burpsuite, zaproxy (both GUI). Use sqlmap/nikto/
+# whatweb/ffuf/gobuster (recon list) for CLI web-app assessment instead.
+
+nikto
+sqlmap
+wpscan
+commix
+sslscan
+sslyze
+testssl.sh
+nuclei
+httpie

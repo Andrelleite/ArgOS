@@ -1,0 +1,36 @@
+#!/bin/sh
+set -e
+
+# ArgOS live-build configuration.
+#
+# This bootstraps from Kali's own kali-rolling repository (not plain Debian),
+# using the same live-build tool Kali itself is built with -- we are not
+# reimplementing Kali's packaging, just pointing stock live-build at Kali's
+# mirrors and keyring. The host (or the Dockerfile) must have the
+# kali-archive-keyring package installed so debootstrap can verify kali-rolling
+# release signatures and find the matching debootstrap script.
+#
+# NOTE: live-build's exact flag set has drifted across releases. Before a
+# real build, sanity-check these against `man lb_config` / `lb config --help`
+# on the build host's installed live-build version.
+
+lb config noauto \
+    --distribution "kali-rolling" \
+    --archive-areas "main contrib non-free non-free-firmware" \
+    --architectures "amd64" \
+    --binary-images "iso-hybrid" \
+    --bootappend-live "boot=live components username=argos hostname=argos-live quiet splash" \
+    --bootloaders "grub-pc" \
+    --mirror-bootstrap "https://http.kali.org/kali" \
+    --mirror-binary "https://http.kali.org/kali" \
+    --mirror-chroot-security "https://http.kali.org/kali" \
+    --mirror-binary-security "https://http.kali.org/kali" \
+    --debootstrap-options "--keyring=/usr/share/keyrings/kali-archive-keyring.gpg" \
+    --apt-recommends false \
+    --firmware-chroot true \
+    --firmware-binary true \
+    --linux-packages "linux-image" \
+    --security true \
+    --updates true \
+    --debian-installer none \
+    "${@}"

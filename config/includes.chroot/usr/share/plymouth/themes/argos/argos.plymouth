@@ -1,0 +1,10 @@
+[Plymouth Theme]
+Name=ArgOS
+Description=ArgOS static boot splash: logo centered on a flat background, no animation
+ModuleName=image
+
+[image]
+ImageDir=/usr/share/plymouth/themes/argos
+ImageFile=logo.png
+BackgroundStartColor=0x0d0d11
+BackgroundEndColor=0x0d0d11

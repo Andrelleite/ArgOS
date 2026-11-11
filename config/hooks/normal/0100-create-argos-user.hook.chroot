@@ -1,0 +1,32 @@
+#!/bin/sh
+set -e
+
+# Create the default ArgOS live user: argos/argos, passwordless sudo.
+#
+# SECURITY NOTE: this is a known, published default (same spirit as Kali's
+# own historical root/toor live user) meant purely to get a live/USB session
+# booted. Anyone who installs this to disk or exposes it on a network MUST
+# run `passwd argos` (and review /etc/sudoers.d/argos-nopasswd) before
+# trusting the machine with anything sensitive.
+
+useradd -m -s /bin/bash -G sudo,adm,dialout,cdrom,floppy,audio,video,plugdev,netdev argos
+echo "argos:argos" | chpasswd
+
+install -d -m 0750 /etc/sudoers.d
+cat > /etc/sudoers.d/argos-nopasswd <<'EOF'
+# Passwordless sudo for the default ArgOS live user.
+# Remove or tighten this file on any persistent/installed system.
+argos ALL=(ALL) NOPASSWD:ALL
+EOF
+chmod 0440 /etc/sudoers.d/argos-nopasswd
+
+# MOTD reminder so the security note isn't just buried in a repo somewhere.
+install -d -m 0755 /etc/update-motd.d
+cat > /etc/update-motd.d/00-argos-security-note <<'EOF'
+#!/bin/sh
+echo ""
+echo "ArgOS: default login is argos/argos with passwordless sudo."
+echo "Run 'passwd argos' before using this system beyond a throwaway live session."
+echo ""
+EOF
+chmod 0755 /etc/update-motd.d/00-argos-security-note

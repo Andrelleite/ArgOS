@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+# Final hygiene pass before the chroot is squashed into the image.
+
+# apt cache / lists -- no point shipping these in the ISO.
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+mkdir -p /var/lib/apt/lists/partial
+
+# machine-id must be regenerated per-boot (and per-install), not shared by
+# every system built from this image.
+rm -f /etc/machine-id /var/lib/dbus/machine-id
+touch /etc/machine-id
+
+# SSH host keys: already removed by the sshd hook, but be defensive in case
+# hook ordering ever changes.
+rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub
+
+# Shell history / temp files that may have accumulated while hooks ran.
+rm -f /root/.bash_history /home/argos/.bash_history
+rm -rf /tmp/* /var/tmp/*
+
+# Log noise from package installs.
+find /var/log -type f -exec truncate -s 0 {} \;
