@@ -18,6 +18,103 @@ still describe the CLI-only-era reasoning for excluding specific GUI
 tools (Burp, Wireshark's GUI, Maltego, GHIDRA, etc.); those exclusions
 haven't been revisited yet now that there's a desktop to run them on.
 
+## Architecture
+
+Top to bottom: what a running ArgOS session is actually made of, and
+what each layer depends on below it. Every component named here is
+real and already covered elsewhere in this README — nothing in this
+diagram is aspirational.
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│ USER                                                                      │
+│   Live session: argos / argos, passwordless sudo (change it!)            │
+│   Installed system: real account from Calamares, replaces the above      │
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ DESKTOP / UI  (optional -- the live session boots straight into this)    │
+│   lightdm (autologin) → Xfce session → Whisker Menu (kali-menu)          │
+│   Panel: cpugraph · systemload · netload · sensors                       │
+│     (argos-setup-panel-widgets, added once via `xfce4-panel --add=`)     │
+│   Desktop: ArgOS wallpaper (argos-set-wallpaper, any monitor layout) ·    │
+│     "Install ArgOS" icon → launches Calamares (graphical installer)      │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ ARGOS'S OWN TOOLING  (userspace -- C, plus shell for simple glue)        │
+│   argosd (daemon)        hardening sysctls; watches default-pw + sshd    │
+│   argos-triage (CLI)     nmap-output triage, ranked, optional --ai       │
+│   argos-toolfinder (CLI) "what tool do I use for X" keyword search       │
+│   argos-selftest (CLI)   tool-rot / installed-but-broken detector        │
+│   argos-setup-persistence   encrypted (LUKS-only) live-USB persistence   │
+│   argos-set-wallpaper / argos-setup-panel-widgets   desktop provisioning │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ PENTEST TOOL CATEGORIES  (277+ packages, sourced from kali-rolling)      │
+│   recon · web · password · wireless · exploit ·                          │
+│   forensics · reverse-engineering · post-exploit                         │
+│   (which OSI layer each category actually operates at -- below)          │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ BASE USERSPACE / PACKAGE LAYER                                           │
+│   bash/zsh, coreutils  ⇄  apt + dpkg  ⇄  kali-rolling (kali.download)    │
+│   nftables -- default-deny firewall (/etc/nftables.conf)                 │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ INIT / SYSTEM SERVICES  (systemd)                                        │
+│   argosd.service (enabled) · nftables.service (enabled)                  │
+│   lightdm.service (enabled) · ssh.service (masked by default)            │
+│   ssh-hostkeys-regen.service (oneshot, runs before ssh.service)          │
+│   apt-daily.timer / apt-daily-upgrade.timer (masked)                     │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ BOOT CHAIN  (firmware to PID 1)                                          │
+│   GRUB (BIOS grub-pc + UEFI grub-efi, ArgOS theme/distributor) →         │
+│   Plymouth (script module: static logo + real boot-progress bar) →      │
+│   initramfs / live-boot (squashfs root, zstd compression,                │
+│     `persistence persistence-encryption=luks` boot params) →             │
+│   systemd (PID 1)                                                        │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ LINUX KERNEL  (linux-image-amd64, Kali's build + firmware-* packages)    │
+│   netfilter/nf_tables       -- backs the firewall                        │
+│   device-mapper / dm-crypt -- LUKS persistence partition                 │
+│   VFS: ext4 (persistence) + squashfs (read-only root) + overlay          │
+│   sysctl hardening applied by argosd at boot: rp_filter, kptr_restrict,  │
+│     dmesg_restrict, yama/ptrace_scope, tcp_syncookies                    │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼──────────────────────────────────────┐
+│ HARDWARE                                                                  │
+│   CPU · RAM · disk/USB · network interface(s) · GPU (optional, hashcat)  │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Where "Layer 7" fits: OSI mapping for the tool categories
+
+A pentest distro's tool categories mostly *are* a tour of the OSI
+model — each one operates at a specific layer of whatever it's
+attacking, which is worth making explicit rather than leaving implicit:
+
+| OSI layer | Name | ArgOS components operating here |
+|---|---|---|
+| 7 | Application | Web tools (`sqlmap`, `nuclei`, `ffuf`, `gobuster`), post-exploit protocol abuse (`netexec` over SMB, `evil-winrm` over WinRM, `responder` over LLMNR/NBT-NS), recon's DNS/LDAP/SMB enumeration, `argos-triage` itself (reads service banners nmap already resolved at this layer) |
+| 6 | Presentation | TLS/encoding inspection (`sslscan`, `sslyze`, `testssl.sh`) |
+| 5 | Session | Post-exploit tunneling/pivoting (`chisel`, `proxytunnel`, `iodine`), SMB/Kerberos session handling (`impacket-scripts`) |
+| 4 | Transport | Port scanning (`nmap`, `masscan` — TCP/UDP), the firewall's actual filtering decisions (`nftables`), online brute-forcing over established TCP sessions (`hydra`, `medusa`) |
+| 3 | Network | `nftables` routing/filtering, `arp-scan`/`netdiscover`, `ike-scan` (IPsec), `traceroute` |
+| 2 | Data link | The wireless category almost entirely lives here: `aircrack-ng`, `wifite`, `reaver`/`bully` (802.11 frames), `macchanger`, `kismet`, `bluez` |
+| 1 | Physical | Wireless/SDR hardware itself, `i2c-tools` for bus-level access |
+
+Forensics and reverse-engineering sit outside this mapping entirely —
+they operate on disk images and binaries, not network layers.
+
 ## What's here
 
 ```
@@ -77,6 +174,53 @@ different flag spellings for several of these (plural vs. singular
 `--debootstrap-options` vs. `--bootstrap-keyring`) and lacks others
 entirely. If `lb config` errors on a different live-build version, run
 `lb config -u` to see what that version actually accepts.
+
+## Running ArgOS in a VM
+
+These are specs for *running* a built ISO in a VM — separate from
+what *building* the ISO needs (root, network, ~20-30GB free, 20-60
+minutes; see above). The live desktop image is noticeably heavier than
+a CLI-only system would have been, since boot now means lightdm + a
+full Xfce session, not a console login.
+
+| | CPU | RAM | Disk | Notes |
+|---|---|---|---|---|
+| **Minimum** | 2 cores | 4 GB | 20 GB | Boots, logs into Xfce, runs individual tools one at a time. Will feel slow under real load. |
+| **Recommended** | 4 cores | 8 GB | 40-60 GB | Comfortable desktop use, a single-target engagement, moderate wordlists. |
+| **Heavy workloads** | 6-8+ cores | 16 GB+ | 80-100+ GB | Large wordlist/hash-cracking jobs, multiple tools running at once, big packet captures. |
+
+Why these numbers, not round guesses: the actual installed system
+(all 277+ packages plus dependencies) is ~7GB — computed by summing
+real `Installed-Size` data from Kali's package index with full
+dependency-closure resolution, not estimated (see the package
+categories section). The compressed `.iso` itself lands around 3.5-4GB.
+4GB RAM is enough to boot and run the squashfs + an Xfce session, but
+gets tight fast once you're also running tools that use real memory.
+
+Three things that matter more than the raw numbers:
+
+- **No persistence partition = writes go to RAM.** `live-boot`'s
+  overlay is tmpfs-backed when there's no persistence partition
+  mounted — every temp file, downloaded wordlist, packet capture, or
+  cracking job's scratch space is consuming RAM directly, on top of
+  whatever's actually running. Set up `argos-setup-persistence` (see
+  above) before doing anything data-heavy without a disk-backed
+  option, or budget considerably more RAM than the table above if you
+  won't.
+- **Wireless tools need a real wireless NIC passed through, not the
+  VM's virtual network adapter.** `aircrack-ng`/`wifite`/monitor mode
+  require actual 802.11 hardware; a hypervisor's NAT/bridged virtual
+  NIC can't do monitor mode or packet injection at all. Pass a USB
+  WiFi adapter through to the VM (VirtualBox supports USB passthrough
+  reasonably well) if you want these tools to do anything real.
+- **GPU passthrough for `hashcat` is a hypervisor-specific, advanced
+  setup, and VirtualBox specifically doesn't support it.** KVM/QEMU
+  with VFIO does; VirtualBox doesn't do real GPU passthrough at all.
+  Without it, `hashcat` still runs via CPU-based OpenCL (`libpocl2t64`
+  is already pulled in as a dependency), just far slower than an
+  actual GPU would give you — expect this for cracking jobs unless
+  you're on a hypervisor and host that actually supports VFIO
+  passthrough.
 
 ## Performance choices
 
