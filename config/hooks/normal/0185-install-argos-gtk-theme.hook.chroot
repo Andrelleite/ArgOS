@@ -1,0 +1,44 @@
+#!/bin/sh
+set -e
+
+# ArgOS's own GTK3 + xfwm4 theme -- window chrome, buttons, menus,
+# scrollbars, not just the wallpaper/icons/login-screen branding
+# elsewhere in this project. Built from vinceliuice's
+# Graphite-gtk-theme (github.com/vinceliuice/Graphite-gtk-theme), an
+# actively-maintained, widely-used project that ships a `red` color
+# variant + `dark` base + real xfwm4 window-theme generation as
+# first-class install.sh options -- confirmed by reading install.sh
+# directly (not just the README): it builds a genuine per-variant
+# xfwm4 themerc plus recolored SVG window-button assets, not just GTK
+# widgets. Cloned at build time, same pattern as Powerlevel10k, since
+# this isn't in Kali's own repository either.
+#
+# sassc (added to desktop.list.chroot) is the only real build
+# dependency -- gtk2-engines-murrine, listed in the project's own
+# README, is never actually referenced anywhere in install.sh (grepped
+# directly): this is a pure CSS/SCSS theme, no legacy murrine rendering
+# engine involved.
+#
+# -t red -c dark: builds only the one color/shade combination actually
+# used (the project ships source for 9 colors x 3 shades x 2 sizes by
+# default, most of which would just be unused bloat). --tweaks black
+# pushes the base even darker, closer to the near-black ArgOS already
+# uses everywhere else (Plymouth, GRUB, wallpapers). Cloned to a
+# scratch location and removed after building -- only the built
+# ArgOS-red-Dark theme under /usr/share/themes is kept.
+#
+# Applied as the actual default via a static xfconf-perchannel XML
+# override (config/includes.chroot/etc/xdg/xfce4/xfconf/xfce-
+# perchannel-xml/{xsettings,xfwm4}.xml), the exact same mechanism
+# already confirmed real elsewhere in this project (it's one of the
+# very files kali-themes' own postinst diverts to set Kali-Dark as
+# *its* default) -- not another login-time xfconf-query autostart
+# script, which would repeat the exact race-condition class of bug
+# already found and fixed in argos-set-wallpaper.
+
+git clone --depth=1 https://github.com/vinceliuice/Graphite-gtk-theme /usr/src/argos-gtk-theme-build
+cd /usr/src/argos-gtk-theme-build
+bash install.sh -d /usr/share/themes -n ArgOS -t red -c dark --tweaks black
+
+cd /
+rm -rf /usr/src/argos-gtk-theme-build

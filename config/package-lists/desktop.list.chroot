@@ -76,3 +76,11 @@ zenity
 # depends on libxrandr2, the library, not this). Used by
 # argos-set-resolution to default the session to 1920x1080.
 x11-xserver-utils
+
+# sassc -- the only real build dependency for ArgOS's own GTK3+xfwm4
+# theme (built at image-build time from an upstream project; see
+# 0185-install-argos-gtk-theme.hook.chroot). Confirmed by reading that
+# project's install.sh directly: it's a pure CSS/SCSS theme, no legacy
+# murrine rendering engine involved despite the project's README
+# listing it as a requirement.
+sassc

@@ -35,8 +35,11 @@ diagram is aspirational.
 ┌───────────────────────────────────▼──────────────────────────────────────┐
 │ DESKTOP / UI  (optional -- the live session boots straight into this)    │
 │   lightdm (autologin) → Xfce session → Whisker Menu (kali-menu)          │
-│   Panel: cpugraph · systemload · netload · sensors                       │
-│     (argos-setup-panel-widgets, added once via `xfce4-panel --add=`)     │
+│   Theme: ArgOS-red-Dark (GTK3 + xfwm4, built from Graphite-gtk-theme) ·   │
+│     Flat-Remix-Red-Dark icon accent -- static xfconf-perchannel XML      │
+│   Panel: cpugraph · systemload · netload · sensors · tool-finder search  │
+│     (argos-setup-panel-widgets / argos-setup-toolfinder-launcher,        │
+│      added once via `xfce4-panel --add=`)                                │
 │   Desktop: ArgOS wallpaper (argos-set-wallpaper, any monitor layout) ·    │
 │     "Install ArgOS" icon → launches Calamares (graphical installer)      │
 └───────────────────────────────────┬──────────────────────────────────────┘
@@ -456,10 +459,11 @@ Per direct request:
 
 **This means the build now needs network access to more than
 `kali.download`**: `packages.microsoft.com`, `download.sublimetext.com`,
-and `github.com`/`codeload.github.com` (for the Powerlevel10k clone),
-all reachable from the build host, not just the machine running
-`argos-preflight.sh`. If your build host sits behind a restrictive
-firewall, these three are the ones to open alongside Kali's own mirror.
+and `github.com`/`codeload.github.com` (for the Powerlevel10k and
+Graphite GTK theme clones), all reachable from the build host, not
+just the machine running `argos-preflight.sh`. If your build host sits
+behind a restrictive firewall, these three are the ones to open
+alongside Kali's own mirror.
 
 None of this — the external repos, the shell/prompt setup, the default-
 app wiring — has been verified by an actual build; same honest-limits
@@ -566,14 +570,68 @@ touched was still winning:
   single-slide slideshow built from the same logo, ArgOS's own
   name/URLs) and `settings.conf` now points `branding: argos` at it.
 
+### GTK3 + window theme
+
+Window chrome, buttons, menus, and scrollbars are now ArgOS's own too —
+not just the wallpaper/icons/login background. Built at image-build
+time from [Graphite-gtk-theme](https://github.com/vinceliuice/Graphite-gtk-theme)
+(`config/hooks/normal/0185-install-argos-gtk-theme.hook.chroot`), an
+actively-maintained upstream project (same clone-at-build-time pattern
+as Powerlevel10k, since it isn't in Kali's repository either) that
+ships a `red` color variant, a `dark` base, and genuine xfwm4
+window-theme generation as first-class `install.sh` options — confirmed
+by reading `install.sh` directly, not assumed from the README: it
+builds a real per-variant xfwm4 `themerc` plus recolored SVG
+window-button assets, not just GTK widgets. Built with
+`-t red -c dark --tweaks black -n ArgOS`, producing the one theme
+actually used (`ArgOS-red-Dark`) rather than the 50-plus
+color/shade/size combinations the project ships source for — the clone
+is removed after building, only the built theme is kept.
+
+`sassc` (added to `desktop.list.chroot`) is the only real build
+dependency — `gtk2-engines-murrine`, listed in the project's own
+README, is never actually referenced anywhere in `install.sh` (grepped
+directly): it's a pure CSS/SCSS theme, no legacy murrine engine
+involved.
+
+Applied as the actual default via a static xfconf-perchannel XML
+override
+(`config/includes.chroot/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/{xsettings,xfwm4}.xml`)
+— the same mechanism already confirmed real elsewhere in this project
+(it's one of the exact files `kali-themes`' own postinst diverts to set
+*its* `Kali-Dark` default), not another login-time `xfconf-query`
+autostart script, which would repeat the exact race-condition class of
+bug already found and fixed in `argos-set-wallpaper`.
+
+The icon accent is `Flat-Remix-Red-Dark` instead of Kali's own
+`Flat-Remix-Blue-Dark` — a free win, not extra build work: both ship
+together in the same already-installed `kali-themes-common` package
+(confirmed by extracting it), so this is a one-line value change in the
+same override file, picked for visual coherence with the new red window
+theme rather than leaving icons and windows in two different accent
+colors. The icon *shapes* themselves are still Flat-Remix's own (full
+icon-set design is out of scope, see below) — only which pre-built
+accent variant is selected changed. The login screen
+(`lightdm-gtk-greeter.conf`) sets the matching `theme-name`/
+`icon-theme-name` too, so it isn't the one surface still showing an
+unrelated theme.
+
+Exact color values are Graphite's own built-in "red" preset
+(`#E53935`/`#F44336`, Material Design reds) — close in spirit to the
+brand red used in Plymouth/GRUB/wallpapers (`#cf1324`) but not a
+pixel-identical match. Matching it exactly would mean patching the
+project's own SCSS/SVG source throughout rather than using its
+pre-built, pre-tested variant — a bigger, more fragile undertaking left
+for later if the difference turns out to matter in practice.
+
 **What's deliberately *not* touched**, because doing it properly is real
 design/engineering work, not a config override, and claiming otherwise
 would be dishonest:
 
-- The GTK widget theme and icon set are still Kali's own
-  (`kali-themes`/Flat-Remix) — building a genuinely different-looking
-  theme from scratch is a real design undertaking, not something to fake
-  with a quick swap.
+- The icon *set* itself — the actual shapes/artwork — is still
+  Flat-Remix's own design; only its accent color was switched (see
+  above). A genuinely custom icon set is a much larger design
+  undertaking than a theme build.
 - The Xfce "Whisker Menu" still has Kali's own application-category
   structure (`kali-menu`'s `.directory` files, MITRE-ATT&CK-style names
   like `kali-reconnaissance`) — the menu button and default favorites
