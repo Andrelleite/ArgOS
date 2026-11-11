@@ -151,12 +151,18 @@ sudo systemctl enable --now ssh.service
 ## Boot splash
 
 Plymouth shows a static logo (no animation) centered on a flat near-black
-background, via Plymouth's `image` module
-(`config/includes.chroot/usr/share/plymouth/themes/argos/`). If your
-build's Plymouth package doesn't ship the `image` splash module, swap
-`ModuleName=image` for `ModuleName=two-step` in `argos.plymouth` and set
-`Watermark=logo.png` under a `[two-step]` section instead — leaving out the
-throbber/progress-bar frame images keeps it static either way.
+background, via Plymouth's `script` module
+(`config/includes.chroot/usr/share/plymouth/themes/argos/`): a 7-line
+script that sets the background color, places the logo sprite once, and
+never touches it again (no `Plymouth.SetRefreshFunction()` callback, which
+is what every animated theme uses to update frames). `script.so` ships in
+Kali's base `plymouth` package, confirmed by extracting the real `.deb`
+rather than assumed — unlike `image` (not a real module at all here) and
+`two-step` (real, but only via the separate `plymouth-themes` package,
+and its own shipped themes don't demonstrate a static-only config worth
+trusting blind). The script syntax itself (`Window.SetBackgroundTopColor`,
+`Image()`, `Sprite()`, `sprite.SetX/SetY/SetOpacity`) is copied from
+Kali's own shipped `script` example theme, not written from memory.
 
 The same logo is reused as a GRUB background/theme
 (`config/includes.chroot/boot/grub/themes/argos/`) for the installed
