@@ -10,9 +10,18 @@ set -e
 # kali-archive-keyring package installed so debootstrap can verify kali-rolling
 # release signatures and find the matching debootstrap script.
 #
-# NOTE: live-build's exact flag set has drifted across releases. Before a
-# real build, sanity-check these against `man lb_config` / `lb config --help`
-# on the build host's installed live-build version.
+# Every flag below was verified against a real, installed live-build
+# (3.0~a57) by actually running `lb config` in this repo, not just
+# written from memory -- live-build's flag set has drifted across
+# releases and several guessed names turned out wrong (--bootloaders
+# isn't real, it's singular --bootloader; --debootstrap-options isn't
+# real either, --bootstrap-keyring is the actual flag for this). Still,
+# re-check with `lb config --help` if this errors on a different
+# live-build version/release than what was tested here.
+#
+# --security/--updates are deliberately omitted: they add a Debian-style
+# stable+security/updates suite split, which doesn't apply to
+# kali-rolling's single rolling suite.
 
 lb config noauto \
     --distribution "kali-rolling" \
@@ -20,17 +29,19 @@ lb config noauto \
     --architectures "amd64" \
     --binary-images "iso-hybrid" \
     --bootappend-live "boot=live components username=argos hostname=argos-live quiet splash" \
-    --bootloaders "grub-pc" \
+    --bootloader "grub-pc" \
     --mirror-bootstrap "https://http.kali.org/kali" \
     --mirror-binary "https://http.kali.org/kali" \
     --mirror-chroot-security "https://http.kali.org/kali" \
     --mirror-binary-security "https://http.kali.org/kali" \
-    --debootstrap-options "--keyring=/usr/share/keyrings/kali-archive-keyring.gpg" \
+    --bootstrap-keyring "/usr/share/keyrings/kali-archive-keyring.gpg" \
     --apt-recommends false \
     --firmware-chroot true \
     --firmware-binary true \
     --linux-packages "linux-image" \
-    --security true \
-    --updates true \
     --debian-installer none \
+    --iso-volume "ArgOS" \
+    --iso-application "ArgOS" \
+    --iso-publisher "ArgOS" \
+    --iso-preparer "ArgOS live-build" \
     "${@}"
