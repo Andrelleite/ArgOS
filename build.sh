@@ -17,6 +17,20 @@ set -euo pipefail
 #   Via Docker:
 #     docker build -t argos-os-builder .
 #     docker run --rm --privileged -v "$PWD:/build" argos-os-builder -c "cd /build && ./build.sh"
+#
+# Runs scripts/argos-preflight.sh first (checks every package list
+# against the live archive before committing 20-60 minutes to a build
+# that might fail partway through on a renamed/missing package -- see
+# that script's own comments for why this exists). Pass --skip-preflight
+# to skip it (e.g. no network access to the mirror from this check, but
+# you're confident the lists are current).
+
+SKIP_PREFLIGHT=0
+for arg in "$@"; do
+    if [ "$arg" = "--skip-preflight" ]; then
+        SKIP_PREFLIGHT=1
+    fi
+done
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "error: live-build requires root (chroot/mount/loopback access)." >&2
@@ -31,6 +45,17 @@ if ! command -v lb >/dev/null 2>&1; then
 fi
 
 cd "$(dirname "$0")"
+
+if [ "$SKIP_PREFLIGHT" -eq 0 ]; then
+    echo "==> argos-preflight"
+    if ! ./scripts/argos-preflight.sh; then
+        echo "error: preflight found package(s) that don't currently resolve -- see above." >&2
+        echo "Fix the package lists, or re-run with --skip-preflight to build anyway." >&2
+        exit 1
+    fi
+else
+    echo "==> argos-preflight (skipped)"
+fi
 
 echo "==> lb clean"
 lb clean --purge

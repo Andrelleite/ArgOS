@@ -95,6 +95,7 @@ netcat-traditional
 socat
 proxychains4
 tcpdump
+nftables
 ethtool
 ifenslave
 vlan

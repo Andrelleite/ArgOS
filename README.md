@@ -54,6 +54,19 @@ docker run --rm --privileged -v "$PWD:/build" argos-os-builder -c "cd /build && 
 
 The resulting `.iso` lands in the project root.
 
+`build.sh` runs `scripts/argos-preflight.sh` first automatically: it
+checks every package in `config/package-lists/` against the live
+`kali-rolling` archive before committing to the full build. This exists
+because it happened to us directly building ArgOS itself — `nikto` and
+`wpscan` were verified present when their list was written, then simply
+gone from the archive by a later build attempt (a rolling release has
+no staging/QA layer, so packages can disappear or get renamed with no
+warning). Catching that in 10 seconds beats finding out 40 minutes into
+a build. Run it standalone any time with `./scripts/argos-preflight.sh`,
+or skip it with `sudo ./build.sh --skip-preflight` if you're confident
+the lists are current (or have no network path to the mirror from
+wherever this check would run).
+
 `auto/config` and `auto/clean` were verified by actually installing
 Kali's real `live-build` package (`1:20250814+kali3`, pulled straight
 from `kali.download`) and running `lb clean`/`lb config` against this
@@ -228,6 +241,29 @@ doesn't share the same key pair. Enable it explicitly if you want it:
 sudo systemctl unmask ssh.service
 sudo systemctl enable --now ssh.service
 ```
+
+## Firewall
+
+Kali ships `nftables` as an installable package, but not actually
+configured to deny anything — installed with no policy set means it
+accepts everything, so nothing is filtered unless you configure it
+yourself. ArgOS ships a real default: `/etc/nftables.conf` denies all
+inbound traffic by default (loopback, established/related connections,
+and ping still work), allows all outbound, and the `nftables.service`
+that loads it is enabled at boot
+(`config/hooks/normal/0260-enable-firewall.hook.chroot`).
+
+To open a port for something you're actively running (a callback
+listener, serving a payload):
+
+```bash
+sudo nft add rule inet argos_filter input tcp dport 4444 accept
+sudo systemctl reload nftables
+```
+
+Ad-hoc `nft add rule` changes don't persist across reboots — the
+ruleset reloads fresh from `/etc/nftables.conf` every time, so add
+anything you want to keep to that file directly.
 
 ## Boot splash
 
