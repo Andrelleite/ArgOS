@@ -408,6 +408,21 @@ mind — these are Xfce's own stock plugins with their own default
 styling, not custom-icon widgets recreating another design pixel for
 pixel.
 
+### Default resolution
+
+The session defaults to 1920x1080 at first login
+(`config/includes.chroot/usr/local/bin/argos-set-resolution`, another
+marker-guarded `/etc/xdg/autostart/` script) rather than whatever a
+VM's virtual display happens to come up at. It tries the connected
+output's already-advertised modes first; if 1920x1080 isn't one of
+them — typical for the plain `vesa`/`fbdev` fallback drivers, which
+don't negotiate EDID the way a real monitor does — it generates a
+modeline with `gtf` (confirmed shipped directly inside
+`xserver-xorg-core`, not a separate dependency) and adds it by hand,
+the standard recipe for a custom resolution under a basic VESA-driven
+display. Guarded the same way as the panel-widget scripts: runs once,
+so a later deliberate resolution change isn't fought on the next login.
+
 ## Defaults
 
 Per direct request:
@@ -491,6 +506,45 @@ real packages' files, not assumed):
   logo one as the actual first-boot default, the rest are there to pick
   from.
 
+**Two branding leaks found from an actual booted image, not guessed**:
+the panel's start-menu button was still Kali's own dragon icon, and an
+"Install Debian" icon kept reappearing on the desktop next to "Install
+ArgOS." Both traced back to the same mechanism — packages whose
+*postinst scripts* install their own config over a path at install
+time, before our `includes.chroot`/hooks ever run, so a file we'd never
+touched was still winning:
+
+- **Whisker Menu button + favorites** — `kali-themes`'s postinst
+  *diverts* a long list of config files during package install
+  (confirmed by reading the actual postinst script), including
+  `/etc/xdg/xfce4/whiskermenu/defaults.rc`, where `button-icon=kali-panel-menu`
+  and the default favorites list pointed at `kali-www`/`kali-tools`/
+  `kali-docs`/`kali-bugs`/`offsec-training`/`exploit-database`/`vulnhub`.
+  `config/includes.chroot/etc/xdg/xfce4/whiskermenu/defaults.rc` now
+  overrides it directly (same mechanism already relied on for
+  `helpers.rc`): `button-icon=argos-panel-menu`, a real icon shipped at
+  every standard `hicolor` size under
+  `/usr/share/icons/hicolor/*/apps/argos-panel-menu.png` (generated from
+  the same logo source as the wallpapers/Plymouth/GRUB art), and the
+  Kali/OffSec-link favorites dropped.
+- **"Install Debian" desktop shortcut** — `calamares-settings-debian`
+  ships an autostart entry
+  (`/etc/xdg/autostart/calamares-desktop-icon.desktop`) that re-copies
+  an "Install Debian" launcher onto the Desktop at *every login*,
+  independent of ArgOS's own "Install ArgOS" shortcut, plus a matching
+  entry in the application menu's System category.
+  `config/hooks/normal/0180-remove-upstream-branding-leftovers.hook.chroot`
+  removes both — `calamares-settings-debian`'s actual installer
+  modules/config (which "Install ArgOS" itself depends on) are
+  untouched.
+- **The installer itself** — Calamares' `/etc/calamares/settings.conf`
+  had `branding: debian`, meaning clicking "Install ArgOS" would have
+  shown Debian's own welcome screen, logo, and slideshow once it
+  actually launched. `config/includes.chroot/etc/calamares/branding/argos/`
+  is a full branding component (`branding.desc`, a welcome image and
+  single-slide slideshow built from the same logo, ArgOS's own
+  name/URLs) and `settings.conf` now points `branding: argos` at it.
+
 **What's deliberately *not* touched**, because doing it properly is real
 design/engineering work, not a config override, and claiming otherwise
 would be dishonest:
@@ -500,7 +554,11 @@ would be dishonest:
   theme from scratch is a real design undertaking, not something to fake
   with a quick swap.
 - The Xfce "Whisker Menu" still has Kali's own application-category
-  structure (`kali-menu`'s `.directory` files) and branding.
+  structure (`kali-menu`'s `.directory` files, MITRE-ATT&CK-style names
+  like `kali-reconnaissance`) — the menu button and default favorites
+  are now ArgOS's own (see below), but replacing the category tree
+  itself would mean reorganizing every installed tool's `.desktop`
+  file, a much larger undertaking than a config override.
 - Firefox ESR's default start page/search config is whatever
   `kali-themes`/Kali's Firefox config package sets, unchanged.
 - **Package names themselves** (`kali-archive-keyring`, `kali-desktop-xfce`,
@@ -739,10 +797,31 @@ not a single-keyword lookup, so "crack wifi password" correctly surfaces
 both the wireless tools (`aircrack-ng`, `wifite`, `cowpatty`) and the
 password tools (`hashcat`, `john`) rather than requiring an exact phrase
 match. Backed by `/etc/argos/toolfinder.csv` (same editable-CSV,
-no-recompiling pattern as the triage ruleset) — currently 117 entries
+no-recompiling pattern as the triage ruleset) — currently 118 entries
 covering every category. Compiled and exercised locally (every query
 pattern below, plus the interactive loop and the no-match path) before
 being added here.
+
+**Also reachable without a terminal**: `argos-toolfinder-gui` wraps the
+same binary in a `zenity` input/output dialog (type a phrase, get a
+scrollable results list), and gets pinned to the panel automatically at
+first login as a launcher plugin
+(`config/includes.chroot/usr/local/bin/argos-setup-toolfinder-launcher`),
+the same `xfce4-panel --add=` mechanism as the system-metrics widgets.
+A launcher plugin starts out empty, though — unlike the metrics
+plugins, it needs its `items` property pointed at a `.desktop` file
+afterward, which means finding the *new* plugin's id. Confirmed for
+real with a throwaway Xvfb + xfconfd + xfwm4 + xfce4-panel session that
+a freshly `--add=`'d plugin shows up as the one new `/plugins/plugin-N`
+entry that wasn't in the panel's property list a moment before, so
+that's how the script finds it — diffing the list, not assuming an id.
+Same honest caveat as the metrics-widget script: that test confirmed
+the mechanism and the exact property schema are real, but the
+sandbox's session-infrastructure gaps (no systemd user session, no
+accessibility bus) meant `--add=launcher` itself didn't reliably fire
+in that improvised rig, so whether this specific script populates the
+panel on an actual booted image's first login is what the next real
+boot tests, same as the metrics widgets before it.
 
 ### Extending any of these
 

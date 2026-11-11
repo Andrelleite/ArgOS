@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ArgOS Tool Finder Panel Launcher
+Comment=Adds a one-click panel launcher for the ArgOS tool finder (once)
+Exec=/usr/local/bin/argos-setup-toolfinder-launcher
+Icon=argos-panel-menu
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=XFCE;

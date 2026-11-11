@@ -1,0 +1,65 @@
+#!/bin/sh
+set -u
+#
+# argos-set-resolution -- defaults the live/installed session to
+# 1920x1080 (Full HD) at first login.
+#
+# A VM's virtual display can come up at a much smaller resolution
+# depending on which driver Xorg actually picks (vesa/fbdev vs a KMS
+# driver) and what the hypervisor's virtual EDID reports -- this
+# forces the common case to a sane default rather than leaving it to
+# chance.
+#
+# Tries the output's already-advertised modes first; if 1920x1080
+# isn't one of them (typical for the plain vesa/fbdev fallback drivers,
+# which don't do EDID negotiation the way a real monitor would), a
+# modeline is generated with `gtf` (shipped directly by
+# xserver-xorg-core, confirmed by extracting the real package -- not a
+# separate dependency) and added by hand. This is the standard,
+# long-documented recipe for a custom resolution under a basic/
+# VESA-driven virtual display.
+#
+# Marker-guarded (like argos-setup-panel-widgets) so this only runs
+# once -- if someone deliberately picks a different resolution
+# afterward, logging back in shouldn't silently override it.
+
+MARKER="${HOME}/.config/argos/.resolution-set"
+
+[ -f "$MARKER" ] && exit 0
+
+command -v xrandr >/dev/null 2>&1 || exit 0
+
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    xrandr --query >/dev/null 2>&1 && break
+    sleep 1
+done
+
+OUTPUT=$(xrandr --query 2>/dev/null | awk '/ connected/{print $1; exit}')
+[ -n "$OUTPUT" ] || exit 0
+
+mkdir -p "$(dirname "$MARKER")"
+
+if xrandr --query 2>/dev/null | grep -q '1920x1080'; then
+    xrandr --output "$OUTPUT" --mode 1920x1080 2>/dev/null || true
+    touch "$MARKER"
+    exit 0
+fi
+
+if ! command -v gtf >/dev/null 2>&1; then
+    touch "$MARKER"
+    exit 0
+fi
+
+MODELINE=$(gtf 1920 1080 60 2>/dev/null \
+    | sed -n 's/^[[:space:]]*Modeline[[:space:]]*//p' \
+    | tr -d '"')
+[ -n "$MODELINE" ] || { touch "$MARKER"; exit 0; }
+
+MODE_NAME=$(printf '%s\n' "$MODELINE" | awk '{print $1}')
+
+# shellcheck disable=SC2086
+xrandr --newmode $MODELINE 2>/dev/null || true
+xrandr --addmode "$OUTPUT" "$MODE_NAME" 2>/dev/null || true
+xrandr --output "$OUTPUT" --mode "$MODE_NAME" 2>/dev/null || true
+
+touch "$MARKER"

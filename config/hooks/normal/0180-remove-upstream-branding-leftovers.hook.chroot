@@ -1,0 +1,43 @@
+#!/bin/sh
+set -e
+
+# Two branding leaks confirmed by extracting the real .deb packages
+# directly, not assumed:
+#
+# 1. calamares-settings-debian ships its own autostart entry
+#    (/etc/xdg/autostart/calamares-desktop-icon.desktop) that re-copies
+#    an "Install Debian" shortcut onto the Desktop at *every login*,
+#    independent of our own "Install ArgOS" shortcut
+#    (/etc/skel/Desktop/install-argos.desktop). Its underlying
+#    /usr/share/applications/calamares-install-debian.desktop entry
+#    also surfaces in the application menu's System category on its
+#    own. Removing both the autostart trigger and the launcher itself
+#    is the only way to actually stop it coming back -- calamares-
+#    settings-debian's actual installer config/modules (which our own
+#    Install ArgOS shortcut depends on) are untouched.
+if [ -f /etc/xdg/autostart/calamares-desktop-icon.desktop ]; then
+    rm -f /etc/xdg/autostart/calamares-desktop-icon.desktop
+fi
+if [ -f /usr/share/applications/calamares-install-debian.desktop ]; then
+    rm -f /usr/share/applications/calamares-install-debian.desktop
+fi
+
+# 2. kali-themes' postinst *diverts* a long list of config files
+#    (confirmed by reading its actual postinst script) -- including
+#    /etc/xdg/xfce4/whiskermenu/defaults.rc, which is where the panel's
+#    start-menu button icon is set to "kali-panel-menu" and the
+#    default favorites list points at kali-www/kali-tools/kali-docs/
+#    kali-bugs/offsec-training/exploit-database/vulnhub. That diversion
+#    happens during package install, before includes.chroot is ever
+#    copied in, which is why ArgOS's own
+#    config/includes.chroot/etc/xdg/xfce4/whiskermenu/defaults.rc
+#    (shipped alongside this hook) is what actually overwrites it --
+#    nothing left to do here for that one, noted for context since it's
+#    the same class of issue as the Install Debian shortcut above.
+#    The matching icon (argos-panel-menu) ships under
+#    /usr/share/icons/hicolor/*/apps/ -- refresh the cache so it's
+#    picked up without relying on icon-theme fallback directory
+#    scanning.
+if command -v gtk-update-icon-cache >/dev/null 2>&1 && [ -d /usr/share/icons/hicolor ]; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
+fi

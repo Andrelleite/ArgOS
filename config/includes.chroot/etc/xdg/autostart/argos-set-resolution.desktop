@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ArgOS Default Resolution
+Comment=Defaults the session to 1920x1080 on first login (once)
+Exec=/usr/local/bin/argos-set-resolution
+Icon=video-display
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=XFCE;

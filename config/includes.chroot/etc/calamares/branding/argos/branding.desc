@@ -1,0 +1,39 @@
+---
+componentName:   argos
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 800px,580px
+windowPlacement: center
+
+strings:
+    productName:         ArgOS
+    shortProductName:    ArgOS
+    version:             1.0
+    shortVersion:        1.0
+    versionedName:       ArgOS 1.0
+    shortVersionedName:  ArgOS 1.0
+    bootloaderEntryName: ArgOS
+    productUrl:          https://github.com/Andrelleite/ArgOS
+    supportUrl:          https://github.com/Andrelleite/ArgOS/issues
+    knownIssuesUrl:      https://github.com/Andrelleite/ArgOS/issues
+    releaseNotesUrl:     https://github.com/Andrelleite/ArgOS
+    donateUrl:           https://github.com/Andrelleite/ArgOS
+
+sidebar: widget
+navigation: widget
+
+images:
+    productLogo:         "argos-logo.png"
+    productIcon:          "argos-logo.png"
+    productWelcome:       "welcome.png"
+
+slideshow:               "show.qml"
+
+style:
+   SidebarBackground:    "#0d0d11"
+   SidebarText:          "#FFFFFF"
+   SidebarTextCurrent:   "#fbfbfb"
+   SidebarBackgroundCurrent: "#cf1324"
+
+slideshowAPI: 2

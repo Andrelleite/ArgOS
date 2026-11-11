@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=ArgOS Tool Finder
+GenericName=Keyword tool search
+Comment=Type a word or phrase to find the right pentesting tool
+Exec=argos-toolfinder-gui
+Icon=argos-panel-menu
+Terminal=false
+Categories=System;
+Keywords=search;tool;find;argos;
+StartupNotify=false

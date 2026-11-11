@@ -65,3 +65,14 @@ terminator
 # that's not the same package as this, the CLI binary, so it needs
 # listing explicitly rather than assuming it rides along.
 libnotify-bin
+
+# zenity -- the actual input/output dialogs behind the one-click panel
+# tool-finder (argos-toolfinder-gui).
+zenity
+
+# xrandr + gtf (confirmed real -- gtf itself ships directly inside
+# xserver-xorg-core, already a hard dependency via xserver-xorg, but
+# the xrandr CLI binary is its own package and xfce4-settings only
+# depends on libxrandr2, the library, not this). Used by
+# argos-set-resolution to default the session to 1920x1080.
+x11-xserver-utils

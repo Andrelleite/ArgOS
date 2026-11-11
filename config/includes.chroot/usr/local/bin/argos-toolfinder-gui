@@ -1,0 +1,27 @@
+#!/bin/sh
+set -u
+#
+# argos-toolfinder-gui -- a one-click way to reach argos-toolfinder's
+# keyword search from the panel, not just a terminal. This is a thin
+# wrapper: zenity provides the actual input/output dialogs, the search
+# logic itself is the same compiled argos-toolfinder binary used from
+# the command line (its color output already auto-disables when stdout
+# isn't a tty, confirmed by reading its source -- nothing to strip
+# here).
+
+QUERY=$(zenity --entry \
+    --title="ArgOS Tool Finder" \
+    --text="Type a word or phrase describing a task (e.g. \"wifi crack\", \"subdomain\", \"check for updates\"):" \
+    --width=420 2>/dev/null)
+
+[ -n "${QUERY:-}" ] || exit 0
+
+RESULTS=$(argos-toolfinder "$QUERY" 2>&1)
+
+if [ -z "$RESULTS" ]; then
+    RESULTS="No matches for \"$QUERY\"."
+fi
+
+printf '%s\n' "$RESULTS" | zenity --text-info \
+    --title="ArgOS Tool Finder: \"$QUERY\"" \
+    --width=640 --height=420 --font=monospace 2>/dev/null
