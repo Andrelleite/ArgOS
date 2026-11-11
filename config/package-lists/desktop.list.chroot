@@ -38,3 +38,9 @@ xfce4-systemload-plugin
 xfce4-netload-plugin
 xfce4-sensors-plugin
 lm-sensors
+
+# Default browser and terminal (see
+# config/hooks/normal/0170-set-default-apps.hook.chroot for actually
+# making them the defaults, not just installed).
+chromium
+terminator

@@ -246,11 +246,14 @@ Most of `config/package-lists/` predates the desktop/installer pivot and
 still deliberately picks CLI tools over GUI ones where Kali's default
 toolset ships both — this wasn't revisited when the desktop was added, so
 these exclusions are now a historical artifact of the CLI-only era rather
-than a hard rule:
+than a hard rule. **`burpsuite`** (Community edition — that's what Kali's
+own package is; Pro needs a separate paid license this doesn't provide)
+was added back explicitly by direct request, so it's no longer in the
+"excluded" column below:
 
 | Excluded (GUI)                        | Included instead                          |
 |----------------------------------------|--------------------------------------------|
-| burpsuite, zaproxy                     | sqlmap, nuclei, ffuf, gobuster, skipfish    |
+| zaproxy                                 | burpsuite, sqlmap, nuclei, ffuf, gobuster, skipfish |
 | wireshark (GUI)                        | tshark, tcpdump                             |
 | maltego, zenmap                        | nmap, masscan, amass, recon-ng              |
 | armitage                                | metasploit-framework (msfconsole)           |
@@ -261,8 +264,12 @@ than a hard rule:
 | autopsy                                 | sleuthkit, testdisk, foremost, scalpel      |
 
 Categories: `base`, `recon`, `web`, `exploit`, `password`, `wireless`,
-`forensics`, `reverse-engineering`, `post-exploit` — **277 distinct
-packages across 9 files**, not just a hand-picked starter set. The bulk of the
+`forensics`, `reverse-engineering`, `post-exploit`, `desktop`,
+`development` — **302 distinct packages across 11 files**, not just a
+hand-picked starter set. `development.list.chroot` is for writing
+exploits/tools, not pentest tools themselves (`golang-go`, `nodejs`,
+`npm` — VS Code and Sublime Text are installed separately, see below,
+since neither is in Kali's own repository at all). The bulk of the
 breadth comes directly from Kali's own `kali-linux-headless` metapackage
 (the official metapackage Kali itself ships for exactly this use case:
 every tool from `kali-linux-default`/`kali-linux-everything` *except* the
@@ -372,6 +379,51 @@ exactly like a specific reference screenshot someone might have in
 mind — these are Xfce's own stock plugins with their own default
 styling, not custom-icon widgets recreating another design pixel for
 pixel.
+
+## Defaults
+
+Per direct request:
+
+- **Shell: zsh**, styled with [Powerlevel10k](https://github.com/romkatv/powerlevel10k)
+  (the "rainbow" preset — a complete config the project ships directly,
+  not the interactive wizard's guessed output). Not in Kali's repo, so
+  `config/hooks/normal/0165-setup-zsh-powerlevel10k.hook.chroot` clones
+  it from upstream at build time into `/usr/share/powerlevel10k`, same
+  as any other build-time dependency, just not from `kali.download`.
+  Applies to both `argos` and `root` — confirmed the clone and the
+  rainbow preset are what's actually expected by cloning and reading it
+  directly before writing this, not from memory.
+- **Browser: Chromium. Terminal: Terminator.**
+  `config/hooks/normal/0170-set-default-apps.hook.chroot` sets both via
+  two mechanisms, since different things check different ones:
+  Debian's `update-alternatives` (`x-www-browser`/`x-terminal-emulator`)
+  and Xfce's own `helpers.rc` (what Thunar's "Open Terminal Here" and
+  the Whisker Menu check instead).
+- **Development tools**: `golang-go`, `nodejs`, `npm` (Kali's own repo,
+  `development.list.chroot`), plus **VS Code** (the real Microsoft
+  build, not `code-oss`) and **Sublime Text** — neither is in Kali's
+  repository at all, both proprietary with their own apt repos.
+  `config/hooks/normal/0160-install-external-dev-tools.hook.chroot`
+  adds each vendor's official repo + signing key and installs from it.
+  Both keys were fetched and verified directly (dearmored, confirmed as
+  real OpenPGP keys matching "Microsoft (Release signing)" and
+  "Sublime HQ Pty Ltd", and both repo index URLs confirmed to serve
+  real `Release`/`Packages` files) before writing this, not copied from
+  a tutorial.
+
+**This means the build now needs network access to more than
+`kali.download`**: `packages.microsoft.com`, `download.sublimetext.com`,
+and `github.com`/`codeload.github.com` (for the Powerlevel10k clone),
+all reachable from the build host, not just the machine running
+`argos-preflight.sh`. If your build host sits behind a restrictive
+firewall, these three are the ones to open alongside Kali's own mirror.
+
+None of this — the external repos, the shell/prompt setup, the default-
+app wiring — has been verified by an actual build; same honest-limits
+footing as the rest of the desktop work this session. The GPG keys,
+repo URLs, and Powerlevel10k clone/preset were individually confirmed
+real; whether the whole chain works end to end in a real `lb build` is
+what the next build attempt actually tests.
 
 ## Branding
 

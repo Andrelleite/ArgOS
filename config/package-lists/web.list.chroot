@@ -1,6 +1,10 @@
-# Web application testing -- CLI only.
-# Explicitly excluded: burpsuite, zaproxy (both GUI). Use sqlmap/nikto/
-# whatweb/ffuf/gobuster for CLI web-app assessment instead.
+# Web application testing.
+# zaproxy (GUI) still excluded -- not requested. burpsuite (Community
+# edition -- that's what Kali's own `burpsuite` package is; Pro requires
+# a separate paid license this doesn't provide) added explicitly per
+# direct request, revisiting the CLI-only-era exclusion noted in the
+# README's Package categories section.
+burpsuite
 
 # Content discovery / fuzzing. Moved here from recon.list.chroot --
 # these are web-specific, not general network/host recon.

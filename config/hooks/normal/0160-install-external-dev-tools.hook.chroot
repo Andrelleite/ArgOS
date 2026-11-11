@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+
+# VS Code and Sublime Text aren't in Kali's repository at all (both are
+# proprietary with their own apt repos); this adds each vendor's
+# official repo + signing key and installs from it. Both repo URLs and
+# GPG keys were fetched and verified directly before writing this
+# (dearmored, confirmed as real OpenPGP keys matching the expected
+# publisher -- "Microsoft (Release signing)" and "Sublime HQ Pty Ltd"
+# -- and the repo index URLs confirmed to return real Release/Packages
+# files) rather than copied from memory.
+#
+# Needs network access to packages.microsoft.com and
+# download.sublimetext.com from the build host, in addition to Kali's
+# own mirror.
+
+install -d -m 0755 /etc/apt/keyrings
+
+# VS Code (official Microsoft build, not code-oss).
+curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg
+chmod 0644 /etc/apt/keyrings/packages.microsoft.gpg
+cat > /etc/apt/sources.list.d/vscode.list <<'EOF'
+deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main
+EOF
+
+# Sublime Text.
+curl -fsSL https://download.sublimetext.com/sublimehq-pub.gpg | gpg --dearmor -o /etc/apt/keyrings/sublimehq-archive.gpg
+chmod 0644 /etc/apt/keyrings/sublimehq-archive.gpg
+cat > /etc/apt/sources.list.d/sublime-text.list <<'EOF'
+deb [signed-by=/etc/apt/keyrings/sublimehq-archive.gpg] https://download.sublimetext.com/ apt/stable/
+EOF
+
+apt-get update
+apt-get install -y --no-install-recommends code sublime-text

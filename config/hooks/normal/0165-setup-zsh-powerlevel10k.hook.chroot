@@ -1,0 +1,41 @@
+#!/bin/sh
+set -e
+
+# zsh as the default shell, styled with Powerlevel10k (the "rainbow"
+# preset -- a complete, ready-to-use config shipped by the project
+# itself, not the interactive wizard's output guessed at). Not in
+# Kali's repo, so cloned directly from upstream at build time -- same
+# as any other build-time dependency, just not from kali.download.
+# Confirmed the clone and the rainbow preset are what's expected by
+# actually cloning and reading it before writing this hook.
+
+git clone --depth=1 https://github.com/romkatv/powerlevel10k /usr/share/powerlevel10k
+
+cat > /etc/skel/.zshrc <<'EOF'
+# Powerlevel10k instant prompt -- must stay at the top of .zshrc, per
+# the project's own setup instructions.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+source /usr/share/powerlevel10k/powerlevel10k.zsh-theme
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt autocd
+autoload -Uz compinit && compinit
+EOF
+cp /usr/share/powerlevel10k/config/p10k-rainbow.zsh /etc/skel/.p10k.zsh
+
+# argos's home (and root's) already exist -- /etc/skel changes made
+# just now don't retroactively apply to either, so copy explicitly.
+cp /etc/skel/.zshrc /etc/skel/.p10k.zsh /home/argos/
+chown argos:argos /home/argos/.zshrc /home/argos/.p10k.zsh
+
+cp /etc/skel/.zshrc /etc/skel/.p10k.zsh /root/
+chown root:root /root/.zshrc /root/.p10k.zsh
+
+usermod -s /usr/bin/zsh argos
+usermod -s /usr/bin/zsh root

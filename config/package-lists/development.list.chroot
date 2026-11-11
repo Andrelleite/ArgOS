@@ -1,0 +1,13 @@
+# Development tooling -- for writing exploits/tools, not pentest tools
+# themselves, hence the separate category ("proper separation").
+#
+# VS Code and Sublime Text aren't in Kali's own repository at all (both
+# are proprietary, each with their own apt repo/signing key) -- those are
+# installed by config/hooks/normal/0160-install-external-dev-tools.hook.chroot
+# instead, not listed here.
+
+# golang-go alone (not the "golang" meta, which also pulls in
+# golang-doc/golang-src -- extra docs/source bloat not worth it here).
+golang-go
+nodejs
+npm
