@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/plymouth-logo-1920x1080.png" alt="ArgOS logo" width="600">
+</p>
+
 # ArgOS
 
 ArgOS is a CLI-only, Kali-rolling-based security/pentesting live distro. No
