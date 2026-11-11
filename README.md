@@ -35,7 +35,7 @@ diagram is aspirational.
 ┌───────────────────────────────────▼──────────────────────────────────────┐
 │ DESKTOP / UI  (optional -- the live session boots straight into this)    │
 │   lightdm (autologin) → Xfce session → Whisker Menu (kali-menu)          │
-│   Theme: ArgOS-red-Dark (GTK3 + xfwm4, built from Graphite-gtk-theme) ·   │
+│   Theme: ArgOS (GTK3 + xfwm4, macOS-like, built from WhiteSur-gtk-theme)  │
 │     Flat-Remix-Red-Dark icon accent -- static xfconf-perchannel XML      │
 │   Panel: cpugraph · systemload · netload · sensors · tool-finder search  │
 │     (argos-setup-panel-widgets / argos-setup-toolfinder-launcher,        │
@@ -460,7 +460,7 @@ Per direct request:
 **This means the build now needs network access to more than
 `kali.download`**: `packages.microsoft.com`, `download.sublimetext.com`,
 and `github.com`/`codeload.github.com` (for the Powerlevel10k and
-Graphite GTK theme clones), all reachable from the build host, not
+WhiteSur GTK theme clones), all reachable from the build host, not
 just the machine running `argos-preflight.sh`. If your build host sits
 behind a restrictive firewall, these three are the ones to open
 alongside Kali's own mirror.
@@ -570,29 +570,58 @@ touched was still winning:
   single-slide slideshow built from the same logo, ArgOS's own
   name/URLs) and `settings.conf` now points `branding: argos` at it.
 
-### GTK3 + window theme
+### GTK3 + window theme: macOS-like, rounded, still a flat config override
 
-Window chrome, buttons, menus, and scrollbars are now ArgOS's own too —
-not just the wallpaper/icons/login background. Built at image-build
-time from [Graphite-gtk-theme](https://github.com/vinceliuice/Graphite-gtk-theme)
-(`config/hooks/normal/0185-install-argos-gtk-theme.hook.chroot`), an
-actively-maintained upstream project (same clone-at-build-time pattern
-as Powerlevel10k, since it isn't in Kali's repository either) that
-ships a `red` color variant, a `dark` base, and genuine xfwm4
-window-theme generation as first-class `install.sh` options — confirmed
-by reading `install.sh` directly, not assumed from the README: it
-builds a real per-variant xfwm4 `themerc` plus recolored SVG
-window-button assets, not just GTK widgets. Built with
-`-t red -c dark --tweaks black -n ArgOS`, producing the one theme
-actually used (`ArgOS-red-Dark`) rather than the 50-plus
-color/shade/size combinations the project ships source for — the clone
-is removed after building, only the built theme is kept.
+Window chrome, buttons, menus, and scrollbars are ArgOS's own too — not
+just the wallpaper/icons/login background. Per direct request for a
+macOS-like look (rounded corners, traffic-light window buttons) that
+stays light on resources, this is built at image-build time from
+[WhiteSur-gtk-theme](https://github.com/vinceliuice/WhiteSur-gtk-theme)
+(`config/hooks/normal/0185-install-argos-gtk-theme.hook.chroot`) — an
+actively-maintained project built specifically to clone macOS's look.
+(An earlier pass used a different upstream theme, Graphite, for a flat
+red/dark look without the rounded-corner request; this replaced it
+rather than running both, since xfwm4 only has one active theme at a
+time anyway.) Confirmed by reading `libs/lib-install.sh` directly, not
+the README (which barely mentions Xfce and focuses on GNOME): it
+genuinely builds a real xfwm4 theme with its own `themerc` and
+per-button PNG assets, not just GTK widgets, and specifically patches
+the Whisker Menu's appearance (`fix_whiskermenu`) — real Xfce support,
+not something bolted on from a GNOME-only project. `sassc` (already in
+`desktop.list.chroot`) is the only real build dependency, same as the
+previous theme.
 
-`sassc` (added to `desktop.list.chroot`) is the only real build
-dependency — `gtk2-engines-murrine`, listed in the project's own
-README, is never actually referenced anywhere in `install.sh` (grepped
-directly): it's a pure CSS/SCSS theme, no legacy murrine engine
-involved.
+Built with `-t red -c dark -m --round --darker`: ArgOS's own red accent
+on a dark base (not the project's default macOS blue, to stay
+consistent with Plymouth/GRUB/wallpapers), `-m` for the Monterey-style
+window-button icons, `--round` so maximized windows keep rounded
+corners instead of snapping square, `--darker` pushing the base closer
+to the near-black used everywhere else. Only this one color/shade
+combination is built, not the dozens the project ships source for.
+
+This project's folder-naming logic turned out to be more involved than
+the previous theme's (`name+color+opacity+alt+theme+scheme`, all
+concatenated — confirmed by reading `install_theemy()` directly).
+Rather than hardcode a guessed-at final folder name and risk it
+silently drifting from whatever a future `git clone` of an
+actively-developed project actually produces, the hook finds the built
+theme by what it actually contains (a real `xfwm4` subdirectory,
+excluding the `-hdpi`/`-xhdpi` sibling folders the installer also
+builds) and points a stable `ArgOS` symlink at it — tested directly
+against a simulated directory layout before trusting it, not just
+reasoned through. `xsettings.xml`/`xfwm4.xml` reference that stable
+name, not the project's own internal naming scheme.
+
+Rounded corners need compositing, so `xfwm4.xml` now also sets
+`use_compositing=true` explicitly (previously relying on xfwm4's own
+compiled-in default) along with a deliberately light set of settings —
+full `frame_opacity` (opaque frames render cheaper than translucent
+ones) and no popup shadows (popups are frequent/ephemeral; skipping
+their shadow cuts rendering overhead without a visible loss) — aimed at
+keeping the look without paying for effects that don't matter. Window
+buttons moved to the **left** side in macOS order — close, minimize,
+maximize (`button_layout=CHM|O`) — rather than Xfce's own
+menu-left/buttons-right default.
 
 Applied as the actual default via a static xfconf-perchannel XML
 override
@@ -603,26 +632,26 @@ override
 autostart script, which would repeat the exact race-condition class of
 bug already found and fixed in `argos-set-wallpaper`.
 
-The icon accent is `Flat-Remix-Red-Dark` instead of Kali's own
-`Flat-Remix-Blue-Dark` — a free win, not extra build work: both ship
-together in the same already-installed `kali-themes-common` package
-(confirmed by extracting it), so this is a one-line value change in the
-same override file, picked for visual coherence with the new red window
-theme rather than leaving icons and windows in two different accent
-colors. The icon *shapes* themselves are still Flat-Remix's own (full
-icon-set design is out of scope, see below) — only which pre-built
-accent variant is selected changed. The login screen
-(`lightdm-gtk-greeter.conf`) sets the matching `theme-name`/
-`icon-theme-name` too, so it isn't the one surface still showing an
-unrelated theme.
+The icon accent stays `Flat-Remix-Red-Dark` for now (already a free
+win from the previous pass — ships in the already-installed
+`kali-themes-common` package, no new dependency) rather than also
+pulling in a separate `WhiteSur-icon-theme` build, which would be a
+reasonable follow-up for full visual consistency (macOS-style rounded
+"squircle" icons) but is a second project/build to verify, not bundled
+into this pass. The login screen (`lightdm-gtk-greeter.conf`) sets the
+matching `theme-name` too, so it isn't the one surface still showing a
+different theme.
 
-Exact color values are Graphite's own built-in "red" preset
-(`#E53935`/`#F44336`, Material Design reds) — close in spirit to the
-brand red used in Plymouth/GRUB/wallpapers (`#cf1324`) but not a
-pixel-identical match. Matching it exactly would mean patching the
-project's own SCSS/SVG source throughout rather than using its
-pre-built, pre-tested variant — a bigger, more fragile undertaking left
-for later if the difference turns out to matter in practice.
+Exact color values are whatever WhiteSur's own built-in "red" preset
+renders — close in spirit to the brand red used in Plymouth/GRUB/wallpapers
+(`#cf1324`) but not a pixel-identical match, the same honest caveat as
+the previous theme pass. No dock: macOS's dock equivalent (Plank) isn't
+in Kali's repository at all (checked directly, not assumed — absent
+from every component), and building it from source would mean
+compiling an unfamiliar Vala application inside a build hook with no
+way to locally verify the result first, a meaningfully bigger risk than
+everything else in this section. Left out rather than shipped
+half-verified; worth a dedicated pass of its own if still wanted.
 
 **What's deliberately *not* touched**, because doing it properly is real
 design/engineering work, not a config override, and claiming otherwise

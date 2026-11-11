@@ -1,44 +1,59 @@
 #!/bin/sh
 set -e
 
-# ArgOS's own GTK3 + xfwm4 theme -- window chrome, buttons, menus,
+# ArgOS's own GTK3 + xfwm4 theme: window chrome, buttons, menus,
 # scrollbars, not just the wallpaper/icons/login-screen branding
-# elsewhere in this project. Built from vinceliuice's
-# Graphite-gtk-theme (github.com/vinceliuice/Graphite-gtk-theme), an
-# actively-maintained, widely-used project that ships a `red` color
-# variant + `dark` base + real xfwm4 window-theme generation as
-# first-class install.sh options -- confirmed by reading install.sh
-# directly (not just the README): it builds a genuine per-variant
-# xfwm4 themerc plus recolored SVG window-button assets, not just GTK
-# widgets. Cloned at build time, same pattern as Powerlevel10k, since
-# this isn't in Kali's own repository either.
+# elsewhere in this project. Per direct request for a macOS-like look
+# (rounded corners, traffic-light window buttons) while staying light
+# on resources, this is built from vinceliuice's WhiteSur-gtk-theme
+# (github.com/vinceliuice/WhiteSur-gtk-theme) -- an actively-maintained
+# project built specifically to clone macOS's look, confirmed (by
+# reading libs/lib-install.sh directly, not the README, which barely
+# mentions Xfce at all and focuses on GNOME) to genuinely build a real
+# xfwm4 theme with its own themerc and PNG window-button assets, not
+# just GTK widgets, and to specifically patch the Xfce Whisker Menu's
+# appearance (`fix_whiskermenu`) -- real Xfce support, not just ported
+# from a GNOME-only project.
 #
-# sassc (added to desktop.list.chroot) is the only real build
-# dependency -- gtk2-engines-murrine, listed in the project's own
-# README, is never actually referenced anywhere in install.sh (grepped
-# directly): this is a pure CSS/SCSS theme, no legacy murrine rendering
-# engine involved.
+# sassc (already added to desktop.list.chroot for the previous GTK
+# theme attempt) is this project's only real build dependency too.
 #
-# -t red -c dark: builds only the one color/shade combination actually
-# used (the project ships source for 9 colors x 3 shades x 2 sizes by
-# default, most of which would just be unused bloat). --tweaks black
-# pushes the base even darker, closer to the near-black ArgOS already
-# uses everywhere else (Plymouth, GRUB, wallpapers). Cloned to a
-# scratch location and removed after building -- only the built
-# ArgOS-red-Dark theme under /usr/share/themes is kept.
+# -t red -c dark: ArgOS's own accent on a dark base, matching the rest
+# of this project's palette, not the project's default macOS blue.
+# -m (Monterey style) and --round (rounded corners survive maximizing,
+# not just floating windows) are the two flags that actually produce
+# the "round edges" look; --darker pushes the base closer to the
+# near-black ArgOS already uses in Plymouth/GRUB/wallpapers. Only this
+# one color/shade combination is built (the project ships many more by
+# default), keeping build time and image size down.
 #
-# Applied as the actual default via a static xfconf-perchannel XML
-# override (config/includes.chroot/etc/xdg/xfce4/xfconf/xfce-
-# perchannel-xml/{xsettings,xfwm4}.xml), the exact same mechanism
-# already confirmed real elsewhere in this project (it's one of the
-# very files kali-themes' own postinst diverts to set Kali-Dark as
-# *its* default) -- not another login-time xfconf-query autostart
-# script, which would repeat the exact race-condition class of bug
-# already found and fixed in argos-set-wallpaper.
+# This project's folder-naming logic is more involved than the
+# previous GTK theme's (name+color+opacity+alt+theme+scheme all
+# concatenated, confirmed by reading libs/lib-install.sh's
+# install_theemy()) -- rather than hardcode a guessed-at final folder
+# name here and risk it silently drifting from whatever a future `git
+# clone` of this actively-developed project actually produces, the
+# built theme is found by what it actually contains (a real xfwm4
+# subdirectory) and pointed at with a stable symlink. xsettings.xml and
+# xfwm4.xml reference that stable "ArgOS" name, not the project's own
+# internal naming scheme.
 
-git clone --depth=1 https://github.com/vinceliuice/Graphite-gtk-theme /usr/src/argos-gtk-theme-build
+git clone --depth=1 https://github.com/vinceliuice/WhiteSur-gtk-theme /usr/src/argos-gtk-theme-build
 cd /usr/src/argos-gtk-theme-build
-bash install.sh -d /usr/share/themes -n ArgOS -t red -c dark --tweaks black
+bash install.sh -d /usr/share/themes -n ArgOS -t red -c dark -m --round --darker
+
+cd /usr/share/themes
+# Excludes the -hdpi/-xhdpi sibling folders the installer also builds
+# alongside the base one (confirmed in lib-install.sh: HDPI_TARGET_DIR
+# and XHDPI_TARGET_DIR are "${TARGET_DIR}-hdpi"/"-xhdpi") -- without
+# this, a plain name match could pick either of those instead of the
+# base theme non-deterministically.
+BUILT_THEME=$(find . -mindepth 1 -maxdepth 1 -type d -name 'ArgOS*' \
+    ! -name '*-hdpi' ! -name '*-xhdpi' \
+    -exec test -d '{}/xfwm4' \; -print | sort | head -n1)
+if [ -n "$BUILT_THEME" ]; then
+    ln -sfn "$(basename "$BUILT_THEME")" ArgOS
+fi
 
 cd /
 rm -rf /usr/src/argos-gtk-theme-build
