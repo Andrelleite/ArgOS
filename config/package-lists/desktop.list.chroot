@@ -1,0 +1,30 @@
+# ArgOS desktop environment + graphical installer.
+#
+# This is a deliberate departure from ArgOS's original CLI-only design:
+# a real Xfce desktop (Kali's own default DE) with a login manager and a
+# graphical installer, matching the "proper, like Kali/Ubuntu/Fedora/
+# Debian" experience rather than a console-only live system.
+
+# Kali's own official Xfce desktop metapackage -- pulls the full stack
+# (Xfce itself, lightdm + greeter, qterminal, thunar, Kali's own
+# branding/menu/theme packages, Firefox, etc.) the same way
+# kali-linux-headless gave us a verified, Kali-maintained base for the
+# CLI tools instead of hand-picking every package ourselves.
+kali-desktop-xfce
+
+# Live-session specific conveniences (zerofree, onboard on-screen
+# keyboard, etc.) that Kali's own live image also includes.
+kali-desktop-live
+
+# --apt-recommends false (set globally in auto/config) means these two
+# don't come along for free with kali-desktop-xfce, but they're what
+# actually makes Thunar able to auto-mount/browse USB drives -- which
+# matters a lot on a live/forensics-adjacent distro.
+gvfs-backends
+gvfs-fuse
+
+# Graphical installer (Calamares) -- partitioning, disk encryption
+# options, locale/timezone, and real user creation, same tool Kali's own
+# live image ships with.
+calamares
+calamares-settings-debian

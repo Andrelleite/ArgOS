@@ -4,19 +4,26 @@
 
 # ArgOS
 
-ArgOS is a CLI-only, Kali-rolling-based security/pentesting live distro. No
-desktop environment, no display manager — it boots straight to a console
-login. It's built with [live-build](https://wiki.debian.org/DebianLive) (the
-same tool Kali itself is built with), bootstrapped directly from Kali's own
-`kali-rolling` repository rather than reimplementing anything Kali already
-maintains.
+ArgOS is a Kali-rolling-based security/pentesting live distro, built with
+[live-build](https://wiki.debian.org/DebianLive) (the same tool Kali itself
+is built with), bootstrapped directly from Kali's own `kali-rolling`
+repository rather than reimplementing anything Kali already maintains. It
+ships a real Xfce desktop (Kali's own default), a graphical installer
+(Calamares), and an extensive CLI pentest toolset on top.
+
+ArgOS started as a CLI-only, no-desktop live system — that constraint has
+since been deliberately dropped in favor of a proper desktop + installer
+experience closer to Kali's own live image. Some package-list comments
+still describe the CLI-only-era reasoning for excluding specific GUI
+tools (Burp, Wireshark's GUI, Maltego, GHIDRA, etc.); those exclusions
+haven't been revisited yet now that there's a desktop to run them on.
 
 ## What's here
 
 ```
 auto/config                    live-build invocation (distribution, arch, bootloader, mirrors)
 auto/clean                     wrapper around `lb clean`
-config/package-lists/*.list.chroot   CLI-only tool sets, one file per category
+config/package-lists/*.list.chroot   tool sets, one file per category, plus desktop.list.chroot
 config/preseed.cfg              debconf answers so the build never blocks on a prompt
 config/hooks/normal/*.hook.chroot    default user, sshd-off, boot theming, argos-tools build, cleanup
 config/includes.chroot/         files dropped verbatim into the chroot (Plymouth + GRUB themes,
@@ -78,9 +85,11 @@ packaging needed):
 
 ## Package categories
 
-Every list in `config/package-lists/` is CLI-only by design — no GUI
-pentest tools. Where Kali's default toolset ships both a GUI and a
-headless/CLI variant, we install the CLI one:
+Most of `config/package-lists/` predates the desktop/installer pivot and
+still deliberately picks CLI tools over GUI ones where Kali's default
+toolset ships both — this wasn't revisited when the desktop was added, so
+these exclusions are now a historical artifact of the CLI-only era rather
+than a hard rule:
 
 | Excluded (GUI)                        | Included instead                          |
 |----------------------------------------|--------------------------------------------|
@@ -135,6 +144,30 @@ passwd argos
 do this (and review `/etc/sudoers.d/argos-nopasswd`) before trusting the
 machine with anything sensitive, especially before installing it to disk or
 putting it on an untrusted network. A MOTD reminder is baked in as well.
+
+## Desktop and installer
+
+The live session boots into Xfce (via `kali-desktop-xfce`, Kali's own
+official metapackage — not a hand-picked set of Xfce components) and
+auto-logs-in as `argos` (`config/includes.chroot/etc/lightdm/lightdm.conf.d/`),
+matching Kali's own live-image behavior — no password prompt for a
+throwaway/live boot. This has no bearing on the password-change warnings
+above, which are about `sudo`/remote-login risk, not desktop auto-login.
+
+There's an **Install ArgOS** icon on the desktop
+(`config/includes.chroot/etc/skel/Desktop/install-argos.desktop`) that
+launches Calamares, the same graphical installer Kali's own live image
+uses — real partitioning, disk encryption options, locale/timezone, and
+actual user-account creation, replacing the fixed `argos`/`argos` login
+with whatever the person installing picks.
+
+This is new and unverified end-to-end: every package name here was
+checked against Kali's live repository the same as everywhere else in
+this repo, and the `lightdm`/Calamares configuration follows standard,
+widely-used patterns, but — unlike the CLI tooling and the boot
+splash — nobody has actually watched this boot into a graphical session
+yet. Treat the first real build with this as a test, not a known-good
+state.
 
 ## SSH
 

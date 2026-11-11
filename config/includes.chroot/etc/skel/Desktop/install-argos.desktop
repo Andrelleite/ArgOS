@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Install ArgOS
+Comment=Install ArgOS to disk
+Icon=calamares
+Exec=pkexec calamares
+Terminal=false
+Categories=System;
+X-GNOME-Autostart-enabled=false

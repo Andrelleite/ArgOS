@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+# Enable the display manager explicitly (defensive -- lightdm's own
+# postinst normally does this via update-alternatives/default-display-
+# manager debconf, but don't rely on that silently succeeding).
+if systemctl list-unit-files lightdm.service >/dev/null 2>&1; then
+    systemctl enable lightdm.service
+fi
+
+# Xfce/Thunar treat a freshly-placed .desktop file as untrusted until
+# it's executable -- without this, double-clicking the install icon
+# shows an "Untrusted application launcher" warning first.
+if [ -f /etc/skel/Desktop/install-argos.desktop ]; then
+    chmod 0755 /etc/skel/Desktop/install-argos.desktop
+fi
+if [ -f /home/argos/Desktop/install-argos.desktop ]; then
+    chmod 0755 /home/argos/Desktop/install-argos.desktop
+    chown argos:argos /home/argos/Desktop/install-argos.desktop
+fi

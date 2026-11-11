@@ -1,6 +1,7 @@
-# ArgOS base system: shell, terminal, networking, boot. No desktop
-# environment and no display manager -- this boots straight to a console
-# login/shell, never Xfce/lightdm.
+# ArgOS base system: shell, terminal, networking, boot. The desktop
+# environment itself (Xfce + lightdm + Calamares) is a separate, explicit
+# departure from ArgOS's original CLI-only design -- see
+# config/package-lists/desktop.list.chroot.
 
 kali-archive-keyring
 
