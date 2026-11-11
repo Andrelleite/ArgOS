@@ -356,6 +356,29 @@ confirmed working correctly: autologin as `argos`, the custom MOTD/
 rendering correctly, which had been one of the least-verified pieces
 going in.
 
+**Second update from a later boot**: with that fix applied, the system
+*still* came up on a plain tty1 shell. Different, deeper cause this
+time — `xserver-xorg` itself was never being installed. `auto/config`
+sets `--apt-recommends false` globally, and both `xfce4` and `lightdm`
+only *Recommend* `xserver-xorg` rather than hard-`Depends` on it
+(confirmed against the real Kali package index, the same way every
+other package decision in this project was checked). With no X server
+present, `lightdm.service` starts, has nothing to launch, and fails —
+and because live-config's own tty1 autologin is a separate, independent
+feature (it fires because of the `username=argos` boot parameter, not
+because a graphical session is running), the console looks identical
+to "stuck on the CLI" either way. The giveaway is that no VT switch to
+a graphical session ever happens. Fixed by adding `xserver-xorg`
+explicitly to `desktop.list.chroot` — its own Depends (not Recommends)
+pull in `xserver-xorg-video-all`, which includes the `vesa`/`fbdev`
+drivers a default VirtualBox VGA adapter needs for an unaccelerated but
+working display. (Kali's archive has no actual VirtualBox
+guest-driver package to install via apt — only
+`virtualbox-guest-additions-iso`, the installer image itself — so 3D
+acceleration and host/guest clipboard integration would still need the
+Guest Additions CD mounted and run manually inside the VM; that's a
+separate, optional step, not something this fix covers.)
+
 ### Always-visible system metrics
 
 The panel always shows CPU, RAM, network, and temperature via real

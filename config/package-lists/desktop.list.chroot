@@ -5,6 +5,21 @@
 # graphical installer, matching the "proper, like Kali/Ubuntu/Fedora/
 # Debian" experience rather than a console-only live system.
 
+# The actual X server. This is the real fix for the "boots straight to
+# a tty1 shell, never reaches a graphical session" bug -- the earlier
+# `systemctl set-default graphical.target` fix was necessary but not
+# sufficient. Both `xfce4` and `lightdm` only *Recommend* xserver-xorg,
+# they don't Depend on it (confirmed against the real Kali package
+# index), so with --apt-recommends false set globally in auto/config,
+# no X server at all was ever being installed: lightdm.service starts,
+# has nothing to launch, fails, and the console just stays on
+# live-config's own tty1 autologin shell -- which looks identical to
+# "never left the CLI" even though graphical.target was in fact active.
+# xserver-xorg's own Depends (not Recommends) pull in
+# xserver-xorg-video-all, which includes the vesa/fbdev drivers a
+# default VirtualBox VGA adapter needs.
+xserver-xorg
+
 # Kali's own official Xfce desktop metapackage -- pulls the full stack
 # (Xfce itself, lightdm + greeter, qterminal, thunar, Kali's own
 # branding/menu/theme packages, Firefox, etc.) the same way
