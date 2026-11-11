@@ -494,6 +494,27 @@ real packages' files, not assumed):
   running monitor/workspace setup and points them at ArgOS's background,
   rather than shipping a static XML with a hardcoded monitor name (which
   only works on whatever hardware/VM it was written for).
+  **Update from an actual boot**: the desktop came up as a plain black
+  canvas instead of the wallpaper. Root cause, confirmed with a
+  throwaway Xvfb+xfconfd+xfwm4+xfdesktop session: `xfconf-query -c
+  xfce4-desktop -l` returns exit 0 even when the channel has zero
+  properties, so the old "wait for xfconfd" retry loop broke out on its
+  first attempt regardless of whether xfdesktop had created its own
+  backdrop properties yet — it almost always raced ahead and fell
+  through to a fallback that wrote `last-image` under a hardcoded
+  `monitor0` path. That path doesn't match the real monitor name
+  xfdesktop actually uses (the test session's real monitor came up
+  named `monitorscreen`, not `monitor0`), so the fallback wrote to a
+  property xfdesktop never reads, and whatever xfdesktop's own
+  freshly-created default happened to be — a plain color — is what
+  actually showed. Fixed by waiting for a real `last-image` property to
+  exist (not just for the channel to respond) and dropping the
+  hardcoded-monitor-name fallback entirely; `image-style` is now also
+  set explicitly alongside `last-image` (confirmed real value: `5`,
+  "zoomed") as a defensive measure. Re-tested end to end in the same
+  worst-case ordering (the script racing ahead of xfdesktop) and
+  confirmed `last-image`/`image-style` land correctly under
+  xfdesktop's own real property names afterward.
 - **A wallpaper gallery, not just one image** —
   `/usr/share/backgrounds/argos/` ships five additional stylized
   variants alongside the plain logo-on-background default (all 1920x1080,
