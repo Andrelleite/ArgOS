@@ -15,3 +15,8 @@
 /config/chroot
 /config/common
 /config/source
+
+# argos-tools build artifacts -- compiled by config/hooks/normal/
+# 0150-build-argos-tools.hook.chroot, not meant to be committed.
+/config/includes.chroot/usr/src/argos-tools/argosd/argosd
+/config/includes.chroot/usr/src/argos-tools/argos-triage/argos-triage

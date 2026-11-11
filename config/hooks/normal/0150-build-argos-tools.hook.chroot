@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+# Build and install ArgOS's own original tooling (argosd, argos-triage) --
+# this is genuinely compiled C under ArgOS branding, not shell glue. Source
+# lives in the image itself at /usr/src/argos-tools/ (a normal FHS location
+# for exactly this), which this hook compiles in place.
+
+cd /usr/src/argos-tools
+make clean
+make install
+
+systemctl enable argosd.service
+
+# The source tree and build-essential/gcc/make stay installed -- this is a
+# reverse-engineering/exploit-dev distro, a C toolchain is expected to be
+# present and useful on its own, not just a build-time dependency to strip.

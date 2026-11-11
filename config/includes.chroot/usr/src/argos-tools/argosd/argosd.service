@@ -1,0 +1,15 @@
+[Unit]
+Description=ArgOS hardening daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/argosd
+Restart=on-failure
+RestartSec=5
+# argosd needs to read /etc/shadow, write hardening sysctls under
+# /proc/sys, and broadcast via wall -- it genuinely needs root, so this
+# intentionally does not run under a reduced-privilege systemd sandbox.
+
+[Install]
+WantedBy=multi-user.target

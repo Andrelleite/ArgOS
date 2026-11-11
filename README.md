@@ -18,8 +18,9 @@ auto/config                    live-build invocation (distribution, arch, bootlo
 auto/clean                     wrapper around `lb clean`
 config/package-lists/*.list.chroot   CLI-only tool sets, one file per category
 config/preseed.cfg              debconf answers so the build never blocks on a prompt
-config/hooks/normal/*.hook.chroot    default user, sshd-off, boot theming, cleanup
-config/includes.chroot/         files dropped verbatim into the chroot (Plymouth + GRUB themes)
+config/hooks/normal/*.hook.chroot    default user, sshd-off, boot theming, argos-tools build, cleanup
+config/includes.chroot/         files dropped verbatim into the chroot (Plymouth + GRUB themes,
+                                 /etc/argos/ config, /usr/src/argos-tools/ original C tooling)
 assets/                         logo source + the derived splash images
 Dockerfile                      Kali-rolling + live-build build environment
 build.sh                        `lb clean && lb config && lb build` wrapper
@@ -137,6 +138,74 @@ Both images were generated from `assets/argos-logo-source.jpg` by cropping
 to the head+wordmark, flood-fill alpha-masking out the near-black
 background, and compositing onto flat `#0d0d11` canvases
 (`assets/plymouth-logo-1920x1080.png`, `assets/grub-logo-1024x768.png`).
+
+## ArgOS's own tooling
+
+Unlike everything else in this image, these two are original — written for
+ArgOS, not pulled from Kali. Source lives in the image itself at
+`/usr/src/argos-tools/` (a normal FHS location for exactly this), and
+`config/hooks/normal/0150-build-argos-tools.hook.chroot` compiles and
+installs them at image-build time via `make install`. Both are plain C,
+built with only `gcc`/`make`/libc (no linked HTTP/JSON library — see
+below) and both were compiled and exercised locally before being added
+here.
+
+### `argosd` — hardening daemon
+
+A systemd service (`argosd.service`, enabled by default) that:
+
+- Applies a handful of kernel-hardening sysctls at startup (`rp_filter`,
+  disabling source-routed packets/ICMP redirects, `kptr_restrict`,
+  `dmesg_restrict`, `yama/ptrace_scope`, SYN cookies).
+- Every 60 seconds, checks two things: whether the `argos` user's password
+  still matches ArgOS's known default hash (see the comment in
+  `config/hooks/normal/0100-create-argos-user.hook.chroot` — the hash is
+  fixed/reproducible across builds specifically so this comparison works),
+  and whether sshd is listening on port 22 (read directly from
+  `/proc/net/tcp{,6}`, no shelling out).
+- If **both** are true at once — sshd reachable *and* the default
+  credentials still work — it logs a `LOG_CRIT` syslog entry and
+  broadcasts a warning to every terminal via `wall`. Either alone just
+  gets a quieter log line.
+- `argosd --status` prints the last check's result (`/run/argosd.status`)
+  without needing root.
+
+### `argos-triage` — recon/triage utility
+
+```
+nmap -oG - -p- <target> | argos-triage
+argos-triage -i scan.gnmap --ai
+```
+
+Parses nmap greppable (`-oG`) output, matches each open port's
+service/version against `/etc/argos/triage-rules.csv` (service substring,
+version substring, severity, note — edit this file to extend the
+ruleset; it's reloaded on every run, no recompiling), and prints a
+severity-ranked, colorized report (CRITICAL first). The shipped ruleset is
+a small, accurate starter set (known historical backdoors/RCEs like
+vsftpd 2.3.4 and the Samba `usermap_script` bug, cleartext-protocol
+warnings, a few "worth a second look" service flags) — not a
+vulnerability database.
+
+**`--ai`**: this is where the AI feature lives. If `ARGOS_AI_API_KEY` is
+set in the environment, the plain-text report (colors stripped,
+regardless of terminal settings) is sent to an LLM for a prioritized,
+prose summary. Endpoint/model are configurable in `/etc/argos/ai.conf`
+(defaults to Anthropic's Messages API); the key itself is **never** read
+from that file or passed on the command line — only the environment
+variable — and never touches `argv`/`ps` output: the request is made by
+shelling out to `curl` with the API key written to a 0600 temp file via
+curl's `--config`/header mechanism, unlinked immediately after. With no
+key set, `argos-triage` still works fully offline (rule-based triage
+only) and just says how to enable the AI step.
+
+### Extending either one
+
+Both are small, single-file C programs (`argosd/argosd.c`,
+`argos-triage/argos-triage.c`) with no build system beyond the one
+`Makefile`. `cd /usr/src/argos-tools && make` rebuilds either; `argos-tools`
+ships in the image as source specifically so this is possible on a live
+system, not just at ISO-build time.
 
 ## License
 

@@ -1,0 +1,35 @@
+# ArgOS triage ruleset.
+#
+# Format: service_substring,version_substring,severity,note
+#   - Matching is a case-insensitive substring match against the nmap
+#     "service version" text for that port. version_substring may be
+#     empty (matches on service alone, e.g. to flag a cleartext protocol
+#     regardless of version).
+#   - severity is one of: CRITICAL, HIGH, MEDIUM, LOW, INFO.
+#   - Fields containing a comma would break this naive CSV parser -- avoid
+#     commas in notes.
+#
+# This is a starter set, not a vulnerability database. Add rows as you
+# find things worth flagging automatically; argos-triage reloads this file
+# on every run.
+
+vsftpd,2.3.4,CRITICAL,Known backdoor in this exact version (CVE-2011-2523) -- smiley-face backdoor gives a root shell on connect
+proftpd,1.3.3,CRITICAL,ProFTPD 1.3.3c backdoored source distribution gave unauthenticated root shells
+unrealircd,3.2.8.1,CRITICAL,Trojaned source distribution with a backdoor command channel (CVE-2010-2075)
+samba,3.0.20,CRITICAL,"username map script" remote command execution (CVE-2007-2447)
+openssh,1.0,HIGH,Very old OpenSSH -- check for known auth bypass/RCE CVEs for this exact version
+ms-wbt-server,,INFO,RDP exposed -- confirm NLA is enforced and check for known CVEs matching the reported build
+telnet,,HIGH,Cleartext remote administration protocol -- credentials and session are sniffable
+rsh,,HIGH,Cleartext remote shell protocol -- same risk class as telnet
+rlogin,,HIGH,Cleartext remote login protocol -- same risk class as rsh/telnet
+ftp,,MEDIUM,Cleartext file transfer unless explicit FTPS is confirmed -- credentials are sniffable
+snmp,,MEDIUM,Check for default "public"/"private" community strings (snmpwalk -c public)
+http,,LOW,Unencrypted web service -- check whether it carries anything sensitive
+nfs,,MEDIUM,Check exports for overly permissive access (showmount -e)
+smb,,MEDIUM,Check for null sessions and SMBv1 (enum4linux / smbclient -N)
+microsoft-ds,,MEDIUM,Check for null sessions and SMBv1 (enum4linux / smbclient -N)
+x11,,HIGH,Open X11 display -- often allows remote keystroke/screen capture or code execution
+mysql,,INFO,Database service exposed -- check for default/blank credentials
+postgresql,,INFO,Database service exposed -- check for default/blank credentials
+redis,,HIGH,Redis with no auth configured is frequently used for unauthenticated RCE via module loading
+docker,,HIGH,Exposed Docker API with no TLS/auth typically allows trivial host takeover

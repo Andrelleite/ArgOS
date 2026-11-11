@@ -2,6 +2,10 @@
 # Explicitly excluded: ghidra, cutter (both GUI). radare2/gdb/objdump below
 # cover disassembly, debugging, and binary analysis from the terminal.
 
+# Full C toolchain -- also what config/hooks/normal/0150-build-argos-tools
+# uses to compile ArgOS's own argosd/argos-triage at image-build time.
+build-essential
+
 radare2
 gdb
 gdbserver

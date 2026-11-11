@@ -10,7 +10,15 @@ set -e
 # trusting the machine with anything sensitive.
 
 useradd -m -s /bin/bash -G sudo,adm,dialout,cdrom,floppy,audio,video,plugdev,netdev argos
-echo "argos:argos" | chpasswd
+
+# A fixed hash (not `chpasswd`'s randomly-salted one) so every ArgOS build
+# produces the exact same /etc/shadow entry for "argos" -- argosd (see
+# 0150-build-argos-tools.hook.chroot) compares against this exact string to
+# detect whether the default password has ever been changed. This is the
+# SHA-512 crypt() of "argos" with a fixed salt; changing the salt here
+# requires updating ARGOS_DEFAULT_HASH in
+# /usr/src/argos-tools/argosd/argosd.c to match.
+usermod -p '$6$argosdefaultsalt$Fg6xszR//6fzLe8WrCYqucX3ZQp8sBV/74BakbC8shDLIun5GahhppNbFshQXn/JoJmCfdEYgtNqY1NnFqI2v.' argos
 
 install -d -m 0750 /etc/sudoers.d
 cat > /etc/sudoers.d/argos-nopasswd <<'EOF'
@@ -27,6 +35,7 @@ cat > /etc/update-motd.d/00-argos-security-note <<'EOF'
 echo ""
 echo "ArgOS: default login is argos/argos with passwordless sudo."
 echo "Run 'passwd argos' before using this system beyond a throwaway live session."
+echo "(argosd is watching for this -- see 'systemctl status argosd' / 'argosd --status'.)"
 echo ""
 EOF
 chmod 0755 /etc/update-motd.d/00-argos-security-note
