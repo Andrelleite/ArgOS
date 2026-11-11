@@ -572,6 +572,24 @@ touched was still winning:
 
 ### GTK3 + window theme: macOS-like, rounded, still a flat config override
 
+![ArgOS theme concept mockup — terminal and file-manager windows with rounded corners, left-side traffic-light buttons, and a red accent on a dark background](assets/argos-theme-mockup.png)
+
+**This is a mockup, not a real screenshot.** This sandbox can't run the
+actual compiled theme (no real display stack, and executing a freshly
+cloned project's own install script here is intentionally restricted)
+— so rather than show nothing, or claim a photo that doesn't exist,
+this is an HTML/CSS mockup built from the real, verified specifics:
+the actual `argos-panel-menu` icon, the actual shipped default
+wallpaper, and the exact colors confirmed from WhiteSur's own SCSS
+source (`#ED5F5D` accent, `#1f1f1f`/`#282828` dark-mode backgrounds —
+not guessed), rendered with Playwright. Rounded window corners,
+left-side traffic-light buttons, and panel layout are all real,
+shipped specifics, not artistic license. What it can't show: actual
+font rendering, real window-manager behavior, or whether everything
+actually looks this clean once genuinely booted — that's still what
+the next real build and boot confirms, same honest caveat as
+everywhere else in this section.
+
 Window chrome, buttons, menus, and scrollbars are ArgOS's own too — not
 just the wallpaper/icons/login background. Per direct request for a
 macOS-like look (rounded corners, traffic-light window buttons) that
