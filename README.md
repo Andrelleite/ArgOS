@@ -144,6 +144,24 @@ later than the verification date above, re-run a similar check (or just
 `apt-get update && apt-get install -s <package-list contents>` as a dry
 run) before committing to a full `lb build`.
 
+### Tool curation
+
+`scripts/argos-preflight.sh` catches packages that have *vanished* from
+the archive, but not ones that are still installable and simply dead
+weight — superseded by a successor project, or abandoned upstream.
+Nobody actively prunes Kali's own default tool list for this; ArgOS's
+is reviewed by hand instead, with the finding left as a comment in the
+list it came from rather than a silent diff:
+
+- **`crackmapexec`** (`post-exploit.list.chroot`) — EOL, archived by its
+  own maintainer in favor of `netexec` (an active continuation of the
+  same tool). Removed; `netexec` already covers it.
+
+This isn't automated — it's a standing practice: when you notice a tool
+in these lists is dead/superseded, leave a dated comment explaining why
+before removing it, the same way the entry above does, so "why isn't X
+here anymore" has an answer in the file itself.
+
 ## Default login
 
 The live image creates one user: **`argos` / `argos`**, with passwordless
@@ -297,14 +315,17 @@ background, and compositing onto flat `#0d0d11` canvases
 
 ## ArgOS's own tooling
 
-Unlike everything else in this image, these two are original — written for
-ArgOS, not pulled from Kali. Source lives in the image itself at
-`/usr/src/argos-tools/` (a normal FHS location for exactly this), and
+Unlike everything else in this image, these are original — written for
+ArgOS, not pulled from Kali. `argosd` and `argos-triage` are plain C;
+source lives in the image itself at `/usr/src/argos-tools/` (a normal
+FHS location for exactly this), and
 `config/hooks/normal/0150-build-argos-tools.hook.chroot` compiles and
-installs them at image-build time via `make install`. Both are plain C,
-built with only `gcc`/`make`/libc (no linked HTTP/JSON library — see
-below) and both were compiled and exercised locally before being added
-here.
+installs them at image-build time via `make install`, built with only
+`gcc`/`make`/libc (no linked HTTP/JSON library — see below). Both were
+compiled and exercised locally before being added here. `argos-selftest`
+and `argos-setup-persistence` are shell — orchestration/process-running
+glue, not the kind of thing that benefits from being compiled — and are
+flagged as such rather than folded into the "original C tooling" claim.
 
 ### `argosd` — hardening daemon
 
@@ -354,6 +375,51 @@ shelling out to `curl` with the API key written to a 0600 temp file via
 curl's `--config`/header mechanism, unlinked immediately after. With no
 key set, `argos-triage` still works fully offline (rule-based triage
 only) and just says how to enable the AI step.
+
+### `argos-selftest` — tool-rot detector
+
+```
+argos-selftest
+```
+
+Runs a representative set of tools from `/etc/argos/selftest-tools.csv`
+(same editable-CSV pattern as the triage ruleset) with a short timeout
+each, and reports which ones are actually broken — missing binary,
+immediate crash, missing shared library — as distinct from "installed
+according to `dpkg`." This is different from `argos-preflight.sh`:
+preflight catches a package *vanishing from the archive* before a
+build; `argos-selftest` catches a package that installed fine but
+doesn't actually work, at any point after that, including on an
+already-booted system. `config/hooks/normal/0890-run-selftest.hook.chroot`
+also runs it once at build time and saves the result to
+`/var/log/argos-selftest-buildtime.log` — informational only (doesn't
+fail the build), since a few of these tools could plausibly behave
+differently in the build chroot than on real booted hardware.
+
+### `argos-setup-persistence` — encrypted live-USB persistence
+
+Kali's live-persistence story is manual, easy to get wrong, and not
+encrypted unless you specifically know to set that up yourself.
+`argos-setup-persistence <partition>` automates the encrypted case
+specifically — it will not set up unencrypted persistence at all:
+
+```
+sudo argos-setup-persistence /dev/sdb2
+```
+
+Expects a partition you've already created (it deliberately does not
+partition a disk itself — that's the genuinely destructive, easy-to-
+get-wrong step, left to `fdisk`/`parted`/GParted, which already do it
+correctly). From there it `cryptsetup luksFormat`s that partition
+(prompts for a passphrase interactively, same as any normal `cryptsetup`
+use), opens it, formats it ext4, and writes the `persistence.conf`
+live-boot expects. `bootappend-live` already includes
+`persistence persistence-encryption=luks` (`auto/config`), so live-boot
+looks for exactly this at every boot and prompts for the passphrase if
+it finds it — no manual boot-parameter editing required. Requires
+typing the exact device path back as confirmation before it touches
+anything, since this is an genuinely destructive operation on whatever
+partition you point it at.
 
 ### Extending either one
 

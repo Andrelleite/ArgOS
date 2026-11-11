@@ -1,0 +1,82 @@
+#!/bin/sh
+set -u
+#
+# argos-selftest -- smoke-tests a representative set of tools from
+# /etc/argos/selftest-tools.csv and reports which ones are actually
+# broken (missing binary, immediate crash, missing shared library)
+# rather than just "installed according to dpkg."
+#
+# This exists because tool rot is routine on a rolling release and Kali
+# gives you no way to know a tool is broken until you personally try to
+# use it mid-engagement -- we hit a version of this problem ourselves
+# this session (nikto/wpscan vanishing from the archive, crackmapexec
+# mid-migration to netexec). This doesn't catch "gone from the
+# archive" (that's argos-preflight.sh, at build time, against the
+# package index) -- it catches "installed, but broken" (at any time,
+# against the actual binaries on this system).
+#
+# Exit status: 0 if everything passed, 1 if anything failed (so this
+# can run as a build-time gate too, not just something a user runs).
+
+MANIFEST="${1:-/etc/argos/selftest-tools.csv}"
+
+if [ ! -r "$MANIFEST" ]; then
+    echo "argos-selftest: cannot read manifest $MANIFEST" >&2
+    exit 1
+fi
+
+PASS=0
+FAIL=0
+
+classify_exit() {
+    case "$1" in
+        127) echo "NOT FOUND" ;;
+        126) echo "NOT EXECUTABLE" ;;
+        139) echo "CRASHED (segfault)" ;;
+        134) echo "ABORTED" ;;
+        124) echo "TIMED OUT" ;;
+        *) echo "" ;;
+    esac
+}
+
+is_failure_code() {
+    case "$1" in
+        127|126|139|134|124) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+echo "argos-selftest: checking tools against $MANIFEST"
+echo
+
+while IFS= read -r line; do
+    case "$line" in
+        ''|'#'*) continue ;;
+    esac
+
+    name="${line%%,*}"
+    rest="${line#*,}"
+    timeout_s="${rest%%,*}"
+    cmd="${rest#*,}"
+
+    # shellcheck disable=SC2086
+    timeout "$timeout_s" sh -c "$cmd" >/dev/null 2>&1
+    code=$?
+
+    if [ "$code" -eq 0 ] || ! is_failure_code "$code"; then
+        printf '  PASS  %s\n' "$name"
+        PASS=$((PASS + 1))
+    else
+        reason="$(classify_exit "$code")"
+        printf '  FAIL  %-40s %s (exit %s)\n' "$name" "$reason" "$code"
+        FAIL=$((FAIL + 1))
+    fi
+done < "$MANIFEST"
+
+echo
+echo "argos-selftest: ${PASS} passed, ${FAIL} failed."
+if [ "$FAIL" -eq 0 ]; then
+    exit 0
+else
+    exit 1
+fi

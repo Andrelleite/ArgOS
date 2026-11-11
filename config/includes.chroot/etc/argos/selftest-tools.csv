@@ -1,0 +1,39 @@
+# ArgOS self-test tool manifest.
+#
+# Format: name,timeout_seconds,command and args
+#   - Picks an invocation per tool that's safe to run non-interactively
+#     (won't touch a network interface, won't block waiting on stdin).
+#   - The exact flag matters less than it looks like it should: argos-
+#     selftest only distinguishes "crashed/missing/not executable" from
+#     "ran" -- a tool printing its own usage text and exiting 1 because
+#     the flag wasn't quite what it wanted still counts as a pass.
+#   - Add a line here for any tool you want covered; no recompiling,
+#     reloaded on every run.
+
+nmap,5,nmap --version
+masscan,5,masscan --version
+amass,10,amass -version
+metasploit-framework (msfconsole),30,msfconsole --version
+sqlmap,5,sqlmap --version
+nuclei,5,nuclei -version
+hashcat,5,hashcat --version
+john,5,john
+hydra,5,hydra -h
+aircrack-ng,5,aircrack-ng --help
+wifite,5,wifite --help
+tshark,5,tshark --version
+bettercap,5,bettercap -version
+radare2,5,radare2 -v
+gdb,5,gdb --version
+netexec,10,netexec --version
+searchsploit (exploitdb),5,searchsploit -h
+responder,5,responder -h
+sleuthkit (mmls),5,mmls -V
+testdisk,5,testdisk /version
+foremost,5,foremost -V
+binwalk,5,binwalk --help
+exiftool,5,exiftool -ver
+yara,5,yara --version
+checksec,5,checksec --version
+argosd (ours),5,argosd --help
+argos-triage (ours),5,argos-triage --help

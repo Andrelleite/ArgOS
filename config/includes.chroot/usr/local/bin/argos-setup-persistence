@@ -1,0 +1,92 @@
+#!/bin/sh
+set -eu
+#
+# argos-setup-persistence -- sets up ENCRYPTED live-USB persistence on
+# an existing partition. Does not create or resize partitions itself
+# (that's the genuinely destructive, easy-to-get-wrong step -- use
+# fdisk/parted/GParted for that, which already do it correctly); this
+# only touches the partition you point it at.
+#
+# bootappend-live already includes "persistence persistence-encryption=luks"
+# (see auto/config), which means live-boot will ONLY accept an
+# encrypted persistence partition -- there is no unencrypted path here,
+# by design. Verified against live-boot's own 9990-misc-helpers.sh
+# rather than assumed: it looks for a LUKS partition, opens it, then
+# checks the filesystem label inside equals "persistence" and a
+# persistence.conf file at its root.
+#
+# Usage: sudo argos-setup-persistence /dev/sdX#
+
+MAPPER_NAME="argos-persistence"
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "error: must run as root (needs cryptsetup/mkfs access)." >&2
+    exit 1
+fi
+
+if [ $# -ne 1 ]; then
+    echo "usage: $(basename "$0") /dev/sdX#  (an existing partition, e.g. /dev/sdb2)" >&2
+    exit 1
+fi
+
+DEVICE="$1"
+
+if [ ! -b "$DEVICE" ]; then
+    echo "error: $DEVICE is not a block device." >&2
+    exit 1
+fi
+
+DEV_TYPE="$(lsblk -no TYPE "$DEVICE" 2>/dev/null | head -n1)"
+if [ "$DEV_TYPE" != "part" ]; then
+    echo "error: $DEVICE does not look like a partition (lsblk reports type '$DEV_TYPE')." >&2
+    echo "This tool only formats an existing partition -- create one first with" >&2
+    echo "fdisk/parted/GParted, then point this at it." >&2
+    exit 1
+fi
+
+echo "About to DESTROY ALL DATA on this partition:"
+echo
+lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT "$DEVICE"
+echo
+echo "This will LUKS-encrypt it, format it ext4, and set it up as the"
+echo "encrypted ArgOS live-persistence partition. This cannot be undone."
+echo
+printf 'Type the device path again to confirm (%s): ' "$DEVICE"
+read -r CONFIRM
+if [ "$CONFIRM" != "$DEVICE" ]; then
+    echo "Confirmation did not match -- aborting, nothing was touched." >&2
+    exit 1
+fi
+
+cleanup() {
+    umount /mnt/argos-persistence-setup 2>/dev/null || true
+    rmdir /mnt/argos-persistence-setup 2>/dev/null || true
+    cryptsetup luksClose "$MAPPER_NAME" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+echo
+echo "==> cryptsetup luksFormat (you'll be prompted for a passphrase -- remember it,"
+echo "    there is no recovery if you forget it)"
+cryptsetup luksFormat --type luks2 "$DEVICE"
+
+echo "==> opening the new LUKS container"
+cryptsetup luksOpen "$DEVICE" "$MAPPER_NAME"
+
+echo "==> formatting ext4, label 'persistence' (live-boot looks for exactly this)"
+mkfs.ext4 -L persistence "/dev/mapper/${MAPPER_NAME}"
+
+echo "==> writing persistence.conf"
+mkdir -p /mnt/argos-persistence-setup
+mount "/dev/mapper/${MAPPER_NAME}" /mnt/argos-persistence-setup
+echo "/ union" > /mnt/argos-persistence-setup/persistence.conf
+umount /mnt/argos-persistence-setup
+rmdir /mnt/argos-persistence-setup
+
+cryptsetup luksClose "$MAPPER_NAME"
+trap - EXIT
+
+echo
+echo "Done. $DEVICE is now an encrypted ArgOS persistence partition."
+echo "It will be detected automatically on the next boot -- you'll be"
+echo "prompted for the passphrase you just set during the boot sequence."

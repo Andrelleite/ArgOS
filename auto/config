@@ -36,7 +36,7 @@ lb config noauto \
     --archive-areas "main contrib non-free non-free-firmware" \
     --architecture "amd64" \
     --binary-image "iso-hybrid" \
-    --bootappend-live "boot=live components username=argos hostname=argos-live quiet splash" \
+    --bootappend-live "boot=live components username=argos hostname=argos-live quiet splash persistence persistence-encryption=luks" \
     --bootloaders "grub-pc grub-efi" \
     --mirror-bootstrap "https://http.kali.org/kali" \
     --mirror-chroot "https://http.kali.org/kali" \

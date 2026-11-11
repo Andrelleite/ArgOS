@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+# Run argos-selftest at build time and keep the result in the image
+# (not just informational chroot output you'd never see again) so it's
+# inspectable after boot too. Deliberately does NOT fail the build on a
+# tool failure -- some tools in the manifest could plausibly behave
+# differently in this chroot than in the actual booted live system
+# (no real network interfaces, no real hardware), and failing a 20-60
+# minute build over something that might just be a chroot artifact is
+# a worse trade than logging it clearly and letting a human look.
+mkdir -p /var/log
+if command -v argos-selftest >/dev/null 2>&1; then
+    argos-selftest > /var/log/argos-selftest-buildtime.log 2>&1 || true
+    cat /var/log/argos-selftest-buildtime.log
+else
+    echo "argos-selftest not found -- skipping build-time self-test" | tee /var/log/argos-selftest-buildtime.log
+fi
