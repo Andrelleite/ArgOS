@@ -22,6 +22,8 @@ live-config-systemd
 grub-pc
 grub-efi-amd64-bin
 plymouth
+plymouth-themes
+zstd
 os-prober
 parted
 gdisk
