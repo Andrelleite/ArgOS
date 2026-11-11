@@ -21,6 +21,9 @@ live-config
 live-config-systemd
 grub-pc
 grub-efi-amd64-bin
+grub-efi-ia32-bin
+grub-common
+mtools
 plymouth
 plymouth-themes
 zstd
