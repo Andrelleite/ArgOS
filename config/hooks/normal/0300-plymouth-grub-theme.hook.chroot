@@ -15,6 +15,7 @@ fi
 # them and regenerates grub.cfg.
 install -d -m 0755 /etc/default/grub.d
 cat > /etc/default/grub.d/argos-theme.cfg <<'EOF'
+GRUB_DISTRIBUTOR="ArgOS"
 GRUB_THEME="/boot/grub/themes/argos/theme.txt"
 GRUB_GFXMODE=1024x768
 GRUB_GFXPAYLOAD_LINUX=keep

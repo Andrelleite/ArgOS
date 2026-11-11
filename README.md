@@ -169,6 +169,54 @@ splash — nobody has actually watched this boot into a graphical session
 yet. Treat the first real build with this as a test, not a known-good
 state.
 
+## Branding
+
+Per explicit direction: no visible "Kali" where it's realistically
+avoidable, and a look distinct from a stock Kali/Debian desktop. What's
+actually overridden, and why each path was chosen (checked against the
+real packages' files, not assumed):
+
+- **`/etc/os-release` + `/usr/lib/os-release` + `/etc/lsb-release`** —
+  identifies as "ArgOS" to `neofetch`, `hostnamectl`, `lsb_release`, and
+  anything else that queries OS identity. Written to both `os-release`
+  locations since Debian normally symlinks one to the other and which
+  one is real vs. symlinked can vary.
+- **`/etc/issue` / `/etc/issue.net`** — the pre-login text banner.
+- **GRUB menu** — `GRUB_DISTRIBUTOR="ArgOS"` added alongside the existing
+  theme/background config.
+- **Login screen (lightdm) background** —
+  `config/includes.chroot/etc/lightdm/lightdm-gtk-greeter.conf` points
+  `background=` at ArgOS's own logo-on-flat-background image instead of
+  Kali's default wallpaper, rather than overwriting Kali's actual
+  wallpaper files in place.
+- **Desktop wallpaper** — `config/includes.chroot/usr/local/bin/argos-set-wallpaper`,
+  run once per session via `/etc/xdg/autostart/`. This discovers
+  whichever `xfce4-desktop` xfconf properties actually exist on the
+  running monitor/workspace setup and points them at ArgOS's background,
+  rather than shipping a static XML with a hardcoded monitor name (which
+  only works on whatever hardware/VM it was written for).
+
+**What's deliberately *not* touched**, because doing it properly is real
+design/engineering work, not a config override, and claiming otherwise
+would be dishonest:
+
+- The GTK widget theme and icon set are still Kali's own
+  (`kali-themes`/Flat-Remix) — building a genuinely different-looking
+  theme from scratch is a real design undertaking, not something to fake
+  with a quick swap.
+- The Xfce "Whisker Menu" still has Kali's own application-category
+  structure (`kali-menu`'s `.directory` files) and branding.
+- Firefox ESR's default start page/search config is whatever
+  `kali-themes`/Kali's Firefox config package sets, unchanged.
+- **Package names themselves** (`kali-archive-keyring`, `kali-desktop-xfce`,
+  `kali-linux-core`, `kali-tools-*`, etc.) still say "kali" — that's the
+  direct tradeoff of bootstrapping from Kali's actual repository instead
+  of forking/repackaging everything, which was the explicit choice made
+  earlier in this project over building independent package
+  infrastructure. `dpkg -l` and the apt sources will show it even though
+  the visible OS identity, boot sequence, and login/desktop background
+  don't.
+
 ## SSH
 
 `openssh-server` is installed but **disabled and masked** by default — it

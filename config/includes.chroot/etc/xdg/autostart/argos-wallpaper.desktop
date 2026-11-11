@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ArgOS Wallpaper
+Comment=Applies the ArgOS desktop background
+Exec=/usr/local/bin/argos-set-wallpaper
+Icon=preferences-desktop-wallpaper
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=XFCE;

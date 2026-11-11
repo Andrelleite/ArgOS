@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+# Sets the ArgOS wallpaper on every detected monitor/workspace via
+# xfconf, rather than shipping a static xfce4-desktop.xml with a
+# hardcoded monitor name (e.g. "monitorVGA-1", "monitoreDP-1") that
+# would only be correct on whatever hardware/VM it was written for.
+# Runs once per session via /etc/xdg/autostart/ -- idempotent, so
+# re-running on every login is harmless.
+
+WALLPAPER=/usr/share/backgrounds/argos/argos-background.png
+
+# xfconfd may not be up yet the instant this autostarts.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    xfconf-query -c xfce4-desktop -l >/dev/null 2>&1 && break
+    sleep 1
+done
+
+xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E '/last-image$' | while read -r prop; do
+    xfconf-query -c xfce4-desktop -p "$prop" -s "$WALLPAPER"
+done
+
+# If nothing matched yet (first-ever login, before xfdesktop has created
+# any per-monitor properties at all), set the common default path
+# directly so there's still a sane first wallpaper.
+if ! xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -qE '/last-image$'; then
+    xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image \
+        -n -t string -s "$WALLPAPER" 2>/dev/null || true
+fi
