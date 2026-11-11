@@ -11,6 +11,7 @@
 *.files
 *.packages
 *.buildlog
+/build-*.log
 /config/binary
 /config/bootstrap
 /config/chroot
