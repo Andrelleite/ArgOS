@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+
+# Mask background timers that add boot-time I/O/network work with no
+# benefit on a live/USB-booted pentest OS -- apt-daily(-upgrade) in
+# particular could silently mutate packages mid-engagement, which is the
+# opposite of what you want from a live session. Masked (not just
+# disabled) so nothing re-enables them later.
+#
+# Checked for existence first rather than assumed: motd-news is an
+# Ubuntu/base-files thing, not something Kali/Debian's apt or systemd
+# ship, so it's a no-op here -- left in defensively in case that ever
+# changes upstream.
+
+mask_if_present() {
+    unit="$1"
+    if [ -e "/usr/lib/systemd/system/${unit}" ] || \
+       [ -e "/lib/systemd/system/${unit}" ] || \
+       [ -e "/etc/systemd/system/${unit}" ]
+    then
+        systemctl mask "${unit}"
+    fi
+}
+
+for unit in apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service motd-news.timer motd-news.service
+do
+    mask_if_present "${unit}"
+done

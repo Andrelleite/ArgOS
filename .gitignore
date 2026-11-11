@@ -20,3 +20,18 @@
 # 0150-build-argos-tools.hook.chroot, not meant to be committed.
 /config/includes.chroot/usr/src/argos-tools/argosd/argosd
 /config/includes.chroot/usr/src/argos-tools/argos-triage/argos-triage
+
+# `lb config` symlinks a batch of Kali's own built-in hooks into
+# config/hooks/{normal,live}/ on every run (1000-, 5000-, 8000-, 9000-
+# prefixed under normal/; 0010-/0050- under live/) -- regenerated from
+# whatever live-build package is installed, never ours to track. Our own
+# hooks are 0100/0150/0200/0300/0900 under normal/ specifically, so
+# everything else there is excluded.
+/config/hooks/live/
+/config/hooks/normal/*
+!/config/hooks/normal/0*.hook.chroot
+
+# `lb config` also auto-generates this default live-system package list
+# on every run (live-boot/live-config/systemd-sysv, overlapping with what
+# base.list.chroot already lists deliberately) -- nothing of ours in it.
+/config/package-lists/live.list.chroot

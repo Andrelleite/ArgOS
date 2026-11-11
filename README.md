@@ -47,6 +47,35 @@ docker run --rm --privileged -v "$PWD:/build" argos-os-builder -c "cd /build && 
 
 The resulting `.iso` lands in the project root.
 
+`auto/config` and `auto/clean` were verified by actually installing
+Kali's real `live-build` package (`1:20250814+kali3`, pulled straight
+from `kali.download`) and running `lb clean`/`lb config` against this
+repo, not written from flag names recalled from memory or tested only
+against Debian/Ubuntu's own packaging of live-build, which uses
+different flag spellings for several of these (plural vs. singular
+`--architecture`/`--binary-image`/`--bootloaders`, and
+`--debootstrap-options` vs. `--bootstrap-keyring`) and lacks others
+entirely. If `lb config` errors on a different live-build version, run
+`lb config -u` to see what that version actually accepts.
+
+## Performance choices
+
+Two deliberate speed decisions, both config/hooks-level (no custom
+packaging needed):
+
+- **`--chroot-squashfs-compression-type zstd`** in `auto/config`. The
+  live root filesystem is read through this compression on every file
+  access while running from USB/live media, not just once at boot;
+  `zstd` decompresses markedly faster than live-build's `xz` default for
+  a modest size cost, which is almost always the right trade for a live
+  OS (build-time compression ratio barely matters; runtime decompression
+  speed does, constantly).
+- **`config/hooks/normal/0250-disable-background-timers.hook.chroot`**
+  masks `apt-daily.timer`/`apt-daily-upgrade.timer` (shipped by the `apt`
+  package itself) so a live session never spends boot-time I/O on them,
+  and — more importantly — never silently mutates packages mid-engagement
+  via an unattended background upgrade.
+
 ## Package categories
 
 Every list in `config/package-lists/` is CLI-only by design — no GUI

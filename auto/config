@@ -10,31 +10,35 @@ set -e
 # kali-archive-keyring package installed so debootstrap can verify kali-rolling
 # release signatures and find the matching debootstrap script.
 #
-# Every flag below was verified against a real, installed live-build
-# (3.0~a57) by actually running `lb config` in this repo, not just
-# written from memory -- live-build's flag set has drifted across
-# releases and several guessed names turned out wrong (--bootloaders
-# isn't real, it's singular --bootloader; --debootstrap-options isn't
-# real either, --bootstrap-keyring is the actual flag for this). Still,
-# re-check with `lb config --help` if this errors on a different
-# live-build version/release than what was tested here.
+# Every flag below was verified against Kali's actual live-build package
+# (1:20250814+kali3 -- downloaded straight from kali.download and run here,
+# not just read about) by actually running `lb config` in this repo. An
+# earlier version of this file was verified against the Debian/Ubuntu
+# packaging of live-build instead, which turned out to use different flag
+# names for several of these (singular --bootloader vs plural
+# --bootloaders, --bootstrap-keyring vs --debootstrap-options, singular
+# --architecture/--binary-image vs plural) -- live-build's flag set is not
+# stable across packagings/releases. If this errors on a different
+# live-build version, re-check with `lb config -u`.
 #
-# --security/--updates are deliberately omitted: they add a Debian-style
-# stable+security/updates suite split, which doesn't apply to
-# kali-rolling's single rolling suite.
+# --security/--updates exist in this version but are left unset: they add
+# a Debian-style stable+security/updates suite split, which doesn't apply
+# to kali-rolling's single rolling suite.
 
 lb config noauto \
     --distribution "kali-rolling" \
     --archive-areas "main contrib non-free non-free-firmware" \
-    --architectures "amd64" \
-    --binary-images "iso-hybrid" \
+    --architecture "amd64" \
+    --binary-image "iso-hybrid" \
     --bootappend-live "boot=live components username=argos hostname=argos-live quiet splash" \
-    --bootloader "grub-pc" \
+    --bootloaders "grub-pc" \
     --mirror-bootstrap "https://http.kali.org/kali" \
+    --mirror-chroot "https://http.kali.org/kali" \
     --mirror-binary "https://http.kali.org/kali" \
     --mirror-chroot-security "https://http.kali.org/kali" \
     --mirror-binary-security "https://http.kali.org/kali" \
-    --bootstrap-keyring "/usr/share/keyrings/kali-archive-keyring.gpg" \
+    --debootstrap-options "--keyring=/usr/share/keyrings/kali-archive-keyring.gpg" \
+    --keyring-packages "kali-archive-keyring" \
     --apt-recommends false \
     --firmware-chroot true \
     --firmware-binary true \
@@ -44,4 +48,5 @@ lb config noauto \
     --iso-application "ArgOS" \
     --iso-publisher "ArgOS" \
     --iso-preparer "ArgOS live-build" \
+    --chroot-squashfs-compression-type "zstd" \
     "${@}"
