@@ -456,6 +456,17 @@ real packages' files, not assumed):
   running monitor/workspace setup and points them at ArgOS's background,
   rather than shipping a static XML with a hardcoded monitor name (which
   only works on whatever hardware/VM it was written for).
+- **A wallpaper gallery, not just one image** —
+  `/usr/share/backgrounds/argos/` ships five additional stylized
+  variants alongside the plain logo-on-background default (all 1920x1080,
+  `assets/wallpapers/` has the source files): a colorful splash/graffiti
+  style, a dark tactical HUD look, a red-team HUD variant, a minimal
+  line-art gradient, and a clean light/"stealth" HUD style. Xfce's own
+  "Desktop Settings" wallpaper picker lists every image in the same
+  folder as whatever's currently set, so all six show up there without
+  any extra scripting — `argos-set-wallpaper` still only sets the plain
+  logo one as the actual first-boot default, the rest are there to pick
+  from.
 
 **What's deliberately *not* touched**, because doing it properly is real
 design/engineering work, not a config override, and claiming otherwise
