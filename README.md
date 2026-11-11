@@ -50,7 +50,7 @@ headless/CLI variant, we install the CLI one:
 
 | Excluded (GUI)                        | Included instead                          |
 |----------------------------------------|--------------------------------------------|
-| burpsuite, zaproxy                     | nikto, sqlmap, nuclei, ffuf, gobuster       |
+| burpsuite, zaproxy                     | sqlmap, nuclei, ffuf, gobuster, skipfish    |
 | wireshark (GUI)                        | tshark, tcpdump                             |
 | maltego, zenmap                        | nmap, masscan, amass, recon-ng              |
 | armitage                                | metasploit-framework (msfconsole)           |
@@ -61,13 +61,32 @@ headless/CLI variant, we install the CLI one:
 | autopsy                                 | sleuthkit, testdisk, foremost, scalpel      |
 
 Categories: `base`, `recon`, `web`, `exploit`, `password`, `wireless`,
-`forensics`, `reverse-engineering`, `post-exploit`.
+`forensics`, `reverse-engineering`, `post-exploit` — **277 distinct
+packages across 9 files**, not just a hand-picked starter set. The bulk of the
+breadth comes directly from Kali's own `kali-linux-headless` metapackage
+(the official metapackage Kali itself ships for exactly this use case:
+every tool from `kali-linux-default`/`kali-linux-everything` *except* the
+GUI ones) — ArgOS pulls its ~190 packages apart into the category files
+above instead of depending on it as one opaque blob, so the lists stay
+readable and independently auditable. `base.list.chroot` also pulls
+`kali-linux-core` + `kali-system-cli` directly, so ArgOS's base system
+tracks Kali's own definition of "core," not a guess at one.
 
-**Before a real build**, diff these lists against `apt-cache search` /
-`apt list` on a current `kali-rolling` mirror. Kali's package set moves
-fast — a couple of tool names here (`crackmapexec` in particular, which
-upstream has been migrating to `netexec`) may need updating by the time
-you build.
+**Every package name in every list was verified against the live
+`kali-rolling` archive** (`https://kali.download`, main + contrib +
+non-free + non-free-firmware components) **on 2026-11-11** — not just
+recalled from memory. Two exceptions are called out explicitly in
+`web.list.chroot`: `nikto` and `wpscan` are commented out because they
+were confirmed *absent* from the amd64 archive on that date (likely a
+transient rebuild/transition gap — `kali-linux-headless` itself still
+hard-depends on both upstream, so Kali's own metapackage would currently
+fail to install too). Re-check `apt-cache policy nikto wpscan` against a
+current mirror and uncomment them once they're back.
+
+Package sets drift on a rolling release — if you build significantly
+later than the verification date above, re-run a similar check (or just
+`apt-get update && apt-get install -s <package-list contents>` as a dry
+run) before committing to a full `lb build`.
 
 ## Default login
 

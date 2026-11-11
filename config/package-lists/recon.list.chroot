@@ -23,3 +23,17 @@ onesixtyone
 snmp
 ldap-utils
 p0f
+
+# From Kali's own kali-linux-headless metapackage (verified against the
+# live kali-rolling archive -- see README for the verification date).
+arp-scan
+arping
+dmitry
+fping
+hping3
+ike-scan
+netdiscover
+netmask
+python3-scapy
+snmpcheck
+spiderfoot

@@ -7,12 +7,19 @@ testdisk
 foremost
 scalpel
 binwalk
+binwalk3
 bulk-extractor
-exiftool
 ewf-tools
 afflib-tools
 dc3dd
 dcfldd
-libewf-utils
 yara
-volatility3
+libimage-exiftool-perl
+
+# From Kali's own kali-linux-headless metapackage.
+exiv2
+hashdeep
+magicrescue
+pdf-parser
+pdfid
+scrounge-ntfs

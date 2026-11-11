@@ -11,5 +11,13 @@ strace
 ltrace
 upx-ucl
 checksec
-ropgadget
+ropper
 file
+
+# From Kali's own kali-linux-headless metapackage.
+clang
+nasm
+ncurses-hexedit
+spike
+xxd
+inetsim

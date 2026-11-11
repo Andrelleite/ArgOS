@@ -4,6 +4,13 @@
 
 kali-archive-keyring
 
+# Kali's own official CLI-only base metapackages -- pull in whatever base
+# CLI tooling Kali itself considers core, so ArgOS stays in sync with
+# upstream's own definition of "the base" rather than drifting from a
+# hand-picked list.
+kali-linux-core
+kali-system-cli
+
 # Kernel / boot / live infrastructure
 linux-image-amd64
 firmware-linux
@@ -56,9 +63,13 @@ htop
 tree
 unzip
 zip
-p7zip-full
+7zip
 jq
 ripgrep
+axel
+rake
+expect
+dos2unix
 
 # Networking stack (CLI only)
 iproute2
@@ -72,15 +83,31 @@ usbutils
 pciutils
 openssh-client
 openssh-server
-dnsutils
+bind9-dnsutils
 traceroute
 netcat-traditional
 socat
 proxychains4
 tcpdump
+ethtool
+ifenslave
+vlan
+openvpn
+vpnc
+miredo
+cifs-utils
+telnet
+unrar
+plocate
 
 # System services
 systemd-timesyncd
 apt-transport-https
 ca-certificates
 gnupg
+pipx
+python3-pip
+python3-virtualenv
+cryptsetup-nuke-password
+vboot-kernel-utils
+vboot-utils

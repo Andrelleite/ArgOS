@@ -11,3 +11,13 @@ pixiewps
 cowpatty
 kismet
 macchanger
+
+# From Kali's own kali-linux-headless metapackage.
+bluez
+i2c-tools
+minicom
+multimac
+rfkill
+sakis3g
+spooftooph
+voiphopper

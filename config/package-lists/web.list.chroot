@@ -2,12 +2,37 @@
 # Explicitly excluded: burpsuite, zaproxy (both GUI). Use sqlmap/nikto/
 # whatweb/ffuf/gobuster (recon list) for CLI web-app assessment instead.
 
-nikto
+# nikto and wpscan are listed here intentionally but commented out: both
+# are verified ABSENT from kali-rolling's main/binary-amd64 archive as of
+# 2026-11-11 (confirmed directly against https://kali.download's package
+# index -- likely a transient rebuild/transition gap, since kali-linux-
+# headless itself still hard-depends on both). Check `apt-cache policy
+# nikto wpscan` against a current mirror and uncomment once they're back.
+# nikto
+# wpscan
+
 sqlmap
-wpscan
 commix
 sslscan
 sslyze
 testssl.sh
 nuclei
 httpie
+
+# From Kali's own kali-linux-headless metapackage.
+cadaver
+davtest
+lbd
+rebind
+skipfish
+wafw00f
+webshells
+weevely
+qsslcaudit
+
+# Local lab stack -- for hosting test targets/webshells, not attacking
+# anything external.
+apache2
+php
+php-mysql
+default-mysql-server
