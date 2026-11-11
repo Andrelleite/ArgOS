@@ -316,16 +316,17 @@ background, and compositing onto flat `#0d0d11` canvases
 ## ArgOS's own tooling
 
 Unlike everything else in this image, these are original — written for
-ArgOS, not pulled from Kali. `argosd` and `argos-triage` are plain C;
-source lives in the image itself at `/usr/src/argos-tools/` (a normal
-FHS location for exactly this), and
+ArgOS, not pulled from Kali. `argosd`, `argos-triage`, and
+`argos-toolfinder` are plain C; source lives in the image itself at
+`/usr/src/argos-tools/` (a normal FHS location for exactly this), and
 `config/hooks/normal/0150-build-argos-tools.hook.chroot` compiles and
 installs them at image-build time via `make install`, built with only
-`gcc`/`make`/libc (no linked HTTP/JSON library — see below). Both were
-compiled and exercised locally before being added here. `argos-selftest`
-and `argos-setup-persistence` are shell — orchestration/process-running
-glue, not the kind of thing that benefits from being compiled — and are
-flagged as such rather than folded into the "original C tooling" claim.
+`gcc`/`make`/libc (no linked HTTP/JSON library — see below). All three
+were compiled and exercised locally before being added here.
+`argos-selftest` and `argos-setup-persistence` are shell —
+orchestration/process-running glue, not the kind of thing that benefits
+from being compiled — and are flagged as such rather than folded into
+the "original C tooling" claim.
 
 ### `argosd` — hardening daemon
 
@@ -421,13 +422,33 @@ typing the exact device path back as confirmation before it touches
 anything, since this is an genuinely destructive operation on whatever
 partition you point it at.
 
-### Extending either one
+### `argos-toolfinder` — "what tool do I use for X?"
 
-Both are small, single-file C programs (`argosd/argosd.c`,
-`argos-triage/argos-triage.c`) with no build system beyond the one
-`Makefile`. `cd /usr/src/argos-tools && make` rebuilds either; `argos-tools`
-ships in the image as source specifically so this is possible on a live
-system, not just at ISO-build time.
+```
+argos-toolfinder crack wifi password
+argos-toolfinder                      # interactive: type queries, blank/quit to exit
+argos-toolfinder --list               # everything, grouped by category
+```
+
+Type a word or phrase describing what you want to do and it prints the
+matching tool(s), ranked by how many of your words actually matched —
+not a single-keyword lookup, so "crack wifi password" correctly surfaces
+both the wireless tools (`aircrack-ng`, `wifite`, `cowpatty`) and the
+password tools (`hashcat`, `john`) rather than requiring an exact phrase
+match. Backed by `/etc/argos/toolfinder.csv` (same editable-CSV,
+no-recompiling pattern as the triage ruleset) — currently 117 entries
+covering every category. Compiled and exercised locally (every query
+pattern below, plus the interactive loop and the no-match path) before
+being added here.
+
+### Extending any of these
+
+All three are small, single-file C programs (`argosd/argosd.c`,
+`argos-triage/argos-triage.c`, `argos-toolfinder/argos-toolfinder.c`)
+with no build system beyond the one `Makefile`. `cd /usr/src/argos-tools
+&& make` rebuilds any of them; `argos-tools` ships in the image as
+source specifically so this is possible on a live system, not just at
+ISO-build time.
 
 ## License
 

@@ -1,0 +1,137 @@
+# ArgOS tool-finder index.
+#
+# Format: keywords,tool,category,description
+#   - keywords is a semicolon-separated list of words/phrases a person
+#     might actually type -- not just the tool's own name. Add
+#     synonyms freely; this is matched by word, not exact phrase.
+#   - category is a short label for grouping in output (recon, web,
+#     password, wireless, exploit, forensics, reverse-engineering,
+#     post-exploit, system).
+#   - description is one line: what it's for, not how to use it.
+#   - Reloaded on every run, no recompiling.
+
+port scan;host discovery;network scan,nmap,recon,Network/port scanner and service/version detection
+fast scan;large network scan;internet scale scan,masscan,recon,Very fast asynchronous port scanner for large ranges
+subdomain enumeration;subdomains;dns enum,amass,recon,In-depth attack surface mapping and subdomain enumeration
+subdomain enumeration;subdomains,sublist3r,recon,Fast subdomain enumeration via search engines
+osint;email harvesting;employee emails,theharvester,recon,Gathers emails/subdomains/hosts from public sources
+osint;automated recon;recon workflow,recon-ng,recon,Modular web reconnaissance framework
+dns enumeration;zone transfer;dns records,dnsenum,recon,DNS enumeration and zone transfer attempts
+dns enumeration;dns records,dnsrecon,recon,DNS enumeration and reconnaissance
+hidden hosts;vhost discovery;domain scan,fierce,recon,Domain/DNS reconnaissance for misconfigured zones
+whois;domain registration lookup,whois,recon,Domain registration lookup
+smb enumeration;share enumeration;windows shares,smbclient,recon,Command-line SMB/CIFS client for browsing shares
+smb enumeration;share enumeration,smbmap,recon,Enumerates SMB shares and permissions
+smb enumeration;null session;windows enumeration,enum4linux,recon,Enumerates users/shares/groups from Windows/Samba
+netbios scan;windows host discovery,nbtscan,recon,NetBIOS nameserver scanner
+snmp scan;snmp community string,onesixtyone,recon,Fast SNMP scanner for default community strings
+ldap query;active directory query,ldap-utils,recon,Command-line LDAP query tools
+passive fingerprint;os fingerprint,p0f,recon,Passive OS/traffic fingerprinting
+ping sweep;host discovery,fping,recon,Sends ICMP to multiple hosts in parallel
+arp scan;local network discovery,arp-scan,recon,ARP-based host discovery on a local network
+packet crafting;custom packets;firewall testing,hping3,recon,Custom TCP/IP packet crafting and testing
+ipsec scan;vpn scan,ike-scan,recon,Discovers and fingerprints IKE/IPsec VPN endpoints
+network discovery;arp discovery,netdiscover,recon,Active/passive ARP-based network discovery
+osint automation;footprinting,spiderfoot,recon,Automated OSINT reconnaissance across many sources
+scapy;packet manipulation library,python3-scapy,recon,Python library for crafting/manipulating packets
+
+web fingerprint;web tech detection,whatweb,web,Identifies web technologies/CMS/frameworks in use
+directory brute force;content discovery;hidden paths,gobuster,web,Fast directory/file/DNS brute-forcer
+directory brute force;content discovery;web fuzzing,ffuf,web,Fast web fuzzer for directories/parameters/vhosts
+directory brute force;content discovery;web fuzzing,feroxbuster,web,Fast recursive content discovery tool
+directory brute force;content discovery,dirb,web,Classic web content scanner
+web fuzzing;parameter fuzzing,wfuzz,web,Web application fuzzer
+sql injection,sqlmap,web,Automated SQL injection detection and exploitation
+command injection,commix,web,Automated command-injection exploitation
+ssl scan;tls scan;cipher check,sslscan,web,Scans SSL/TLS configuration and ciphers
+ssl scan;tls scan;cipher check,sslyze,web,Scans SSL/TLS configuration in depth
+ssl scan;tls scan;heartbleed,testssl.sh,web,Checks TLS/SSL configuration and known vulnerabilities
+vulnerability templates;cve scan;web vuln scan,nuclei,web,Template-driven vulnerability scanner
+http client;rest api testing,httpie,web,User-friendly command-line HTTP client
+webdav,cadaver,web,Command-line WebDAV client
+webdav vulnerability,davtest,web,Tests WebDAV servers for exploitable misconfigurations
+load balancer detection,lbd,web,Detects load balancers in front of a web target
+dns rebinding,rebind,web,DNS rebinding attack tool
+web content scan;fast scanner,skipfish,web,Fast active web application security scanner
+waf detection;firewall fingerprint,wafw00f,web,Identifies which WAF is protecting a web target
+webshell;php shell,webshells,web,Collection of webshell payloads for post-exploitation of web apps
+webshell;php shell,weevely,web,Weaponized PHP webshell generator/manager
+
+password cracking;hash cracking;gpu cracking,hashcat,password,GPU-accelerated password/hash cracking
+password cracking;hash cracking,john,password,CPU-based password cracker (John the Ripper)
+online brute force;login brute force,hydra,password,Fast network login brute-forcer for many protocols
+online brute force;login brute force,medusa,password,Parallel network login brute-forcer
+online brute force;login brute force,ncrack,password,Network authentication cracking tool
+wordlist generation;custom wordlist,crunch,password,Generates custom wordlists by pattern
+wordlist generation;website wordlist,cewl,password,Generates wordlists by spidering a website
+password guessing;common passwords,cupp,password,Generates likely passwords from personal info
+rainbow table,ophcrack-cli,password,Rainbow-table-based password cracking (command-line)
+identify hash type,hash-identifier,password,Identifies the type of a given hash
+identify hash type,hashid,password,Identifies the type of a given hash
+wordlist mangling;rule based mutation,rsmangler,password,Mangles wordlists with common mutation rules
+wordlists;default wordlists;rockyou,wordlists,password,Collection of default wordlists (incl. rockyou.txt)
+
+wifi crack;wpa crack;wireless attack,aircrack-ng,wireless,Suite for auditing WiFi (WEP/WPA/WPA2) security
+wifi crack;automated wireless attack,wifite,wireless,Automates common wireless attacks
+wps attack;wps pin crack,reaver,wireless,Brute-forces WPS PINs to recover WPA/WPA2 keys
+wps attack;wps pin crack,bully,wireless,WPS brute-force attack tool
+wps pixie dust,pixiewps,wireless,Offline WPS PIN recovery (pixie-dust attack)
+wifi handshake crack,cowpatty,wireless,WPA-PSK handshake cracking tool
+wireless monitoring;spectrum analysis;sdr,kismet,wireless,Wireless network detector/sniffer/monitor
+mac address change,macchanger,wireless,Changes a network interface's MAC address
+dos wireless;deauth,mdk4,wireless,Wireless denial-of-service/testing toolkit
+
+exploit framework;msfconsole,metasploit-framework,exploit,Exploitation framework with modules for known vulnerabilities
+search exploits;known exploit database,searchsploit,exploit,Searches a local copy of Exploit-DB
+social engineering;phishing campaign,set,exploit,Social-Engineering Toolkit for phishing/campaign attacks
+metasploit payload generator,msfpc,exploit,Simplifies generating Metasploit payloads
+
+packet capture;sniff traffic,tshark,post-exploit,Command-line packet capture/analysis (Wireshark engine)
+packet capture;sniff traffic,tcpdump,post-exploit,Command-line packet capture
+mitm;man in the middle;arp spoof,bettercap,post-exploit,Framework for network attacks/MITM/reconnaissance
+mitm;man in the middle;arp spoof,ettercap-text-only,post-exploit,Classic MITM/sniffing suite (CLI build)
+llmnr spoofing;nbt-ns spoofing;credential capture,responder,post-exploit,Captures credentials via LLMNR/NBT-NS/MDNS poisoning
+smb exec;lateral movement;active directory,netexec,post-exploit,Swiss-army-knife for network/AD lateral movement (successor to crackmapexec)
+pass the hash;ntlm relay,impacket-scripts,post-exploit,Collection of Python scripts for Windows protocol attacks
+pass the hash,passing-the-hash,post-exploit,Pass-the-hash authentication toolkit
+windows credential dumping,mimikatz,post-exploit,Extracts Windows credentials/tickets from memory
+dump windows passwords;sam dump,samdump2,post-exploit,Dumps password hashes from a Windows SAM file
+windows credential dumping,creddump7,post-exploit,Dumps credentials from Windows registry hives
+privilege escalation check,unix-privesc-check,post-exploit,Checks a Unix system for privilege-escalation vectors
+privilege escalation;ad enumeration,powersploit,post-exploit,PowerShell post-exploitation framework
+privilege escalation;c2 framework,powershell-empire,post-exploit,PowerShell/post-exploitation C2 framework
+remote desktop access,evil-winrm,post-exploit,WinRM shell for remote Windows administration/post-exploitation
+tunneling;pivot;port forwarding,chisel,post-exploit,Fast TCP/UDP tunnel over HTTP
+tunneling;pivot,proxytunnel,post-exploit,Tunnels a connection through an HTTP proxy
+tunneling;pivot;dns tunnel,iodine,post-exploit,Tunnels IPv4 traffic over DNS
+windows registry editor,chntpw,post-exploit,Resets Windows passwords / edits the registry offline
+active directory certificate attack,certipy-ad,post-exploit,Active Directory Certificate Services attack tool
+windows gpp passwords,gpp-decrypt,post-exploit,Decrypts Group Policy Preferences passwords
+windows powershell,powershell,post-exploit,PowerShell (pwsh) for Windows administration/scripting
+
+disk recovery;partition recovery;undelete,testdisk,forensics,Recovers lost partitions and undeletes files
+file carving;recover deleted files,foremost,forensics,Recovers files by signature from raw disk images
+file carving;recover deleted files,scalpel,forensics,Fast file carving from raw disk images
+binary analysis;firmware analysis;embedded extraction,binwalk,forensics,Searches/extracts embedded files from firmware images
+disk imaging,dc3dd,forensics,Forensic disk imaging (dd variant)
+disk imaging,dcfldd,forensics,Forensic disk imaging (dd variant)
+file metadata;exif data,exiftool,forensics,Reads/writes file metadata (EXIF and more)
+malware signature scanning;yara rules,yara,forensics,Pattern-matching tool for malware/file identification
+disk forensics suite,sleuthkit,forensics,Command-line digital forensics toolkit
+
+disassemble binary;reverse engineering,radare2,reverse-engineering,Reverse-engineering framework and disassembler
+debug binary;debugger,gdb,reverse-engineering,GNU debugger
+check binary protections;exploit mitigations,checksec,reverse-engineering,Checks a binary for security mitigations (NX/PIE/canary/etc.)
+rop gadgets;return oriented programming,ropper,reverse-engineering,Finds ROP gadgets in a binary
+unpack executable;packer,upx-ucl,reverse-engineering,Packs/unpacks executables (UPX)
+compile exploit;assembler,nasm,reverse-engineering,x86 assembler
+trace syscalls,strace,reverse-engineering,Traces system calls made by a process
+trace library calls,ltrace,reverse-engineering,Traces library calls made by a process
+
+system monitor;resource usage,htop,system,Interactive process/resource monitor
+system monitor;resource usage,btop,system,Modern interactive resource monitor
+firewall;block ports;network filtering,nftables,system,Default-deny firewall framework (see /etc/nftables.conf)
+encrypted usb persistence;live persistence setup,argos-setup-persistence,system,Sets up encrypted live-USB persistence (ArgOS's own tool)
+check tools are working;tool health check,argos-selftest,system,Smoke-tests installed tools for breakage (ArgOS's own tool)
+triage scan results;prioritize findings;ai summary,argos-triage,system,Parses nmap output and ranks findings by severity, optional AI summary (ArgOS's own tool)
+default password warning;hardening daemon,argosd,system,Watches for the default password/exposed-sshd combo (ArgOS's own tool)

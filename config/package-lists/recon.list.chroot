@@ -1,4 +1,10 @@
 # Reconnaissance / information gathering -- all CLI.
+#
+# Web content-discovery/fuzzing tools (gobuster, ffuf, wfuzz, dirb,
+# feroxbuster, whatweb) moved out of here to web.list.chroot -- they're
+# web-specific, not general network/host recon, and were originally
+# miscategorized when this list was first populated from Kali's
+# kali-linux-headless dependency list.
 
 nmap
 masscan
@@ -8,12 +14,7 @@ recon-ng
 dnsenum
 dnsrecon
 fierce
-whatweb
 sublist3r
-dirb
-gobuster
-ffuf
-wfuzz
 whois
 smbclient
 smbmap

@@ -21,6 +21,7 @@
 # 0150-build-argos-tools.hook.chroot, not meant to be committed.
 /config/includes.chroot/usr/src/argos-tools/argosd/argosd
 /config/includes.chroot/usr/src/argos-tools/argos-triage/argos-triage
+/config/includes.chroot/usr/src/argos-tools/argos-toolfinder/argos-toolfinder
 
 # `lb config` symlinks a batch of Kali's own built-in hooks into
 # config/hooks/{normal,live}/ on every run (1000-, 5000-, 8000-, 9000-

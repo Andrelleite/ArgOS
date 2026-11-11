@@ -1,6 +1,15 @@
 # Web application testing -- CLI only.
 # Explicitly excluded: burpsuite, zaproxy (both GUI). Use sqlmap/nikto/
-# whatweb/ffuf/gobuster (recon list) for CLI web-app assessment instead.
+# whatweb/ffuf/gobuster for CLI web-app assessment instead.
+
+# Content discovery / fuzzing. Moved here from recon.list.chroot --
+# these are web-specific, not general network/host recon.
+whatweb
+dirb
+gobuster
+ffuf
+wfuzz
+feroxbuster
 
 # nikto and wpscan are listed here intentionally but commented out: both
 # are verified ABSENT from kali-rolling's main/binary-amd64 archive as of

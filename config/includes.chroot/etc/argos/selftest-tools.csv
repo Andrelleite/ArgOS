@@ -35,5 +35,8 @@ binwalk,5,binwalk --help
 exiftool,5,exiftool -ver
 yara,5,yara --version
 checksec,5,checksec --version
+feroxbuster,5,feroxbuster --version
+btop,5,btop --version
 argosd (ours),5,argosd --help
 argos-triage (ours),5,argos-triage --help
+argos-toolfinder (ours),5,argos-toolfinder --help
