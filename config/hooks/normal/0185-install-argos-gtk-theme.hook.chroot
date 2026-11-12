@@ -57,3 +57,32 @@ fi
 
 cd /
 rm -rf /usr/src/argos-gtk-theme-build
+
+# Applying the theme via xsettings.xml alone depends on xfsettingsd
+# actually propagating it to running GTK3 apps via the XSETTINGS
+# protocol at runtime. That mechanism is confirmed real (xfsettingsd's
+# autostart entry is shipped directly by the xfce4-settings package,
+# a hard Depends of xfce4, not something that can be silently
+# missing) -- but it's still one more moving part than necessary for
+# something this static. GTK3's own gtk-3.0/settings.ini is a plain
+# file every GTK3 app reads directly at startup, no daemon or
+# propagation involved, so it's written here too as a belt-and-
+# suspenders mechanism that can't be affected by session-startup
+# timing at all.
+install -d -m 0755 /etc/skel/.config/gtk-3.0
+cat > /etc/skel/.config/gtk-3.0/settings.ini <<'EOF'
+[Settings]
+gtk-theme-name=ArgOS
+gtk-application-prefer-dark-theme=true
+EOF
+
+# /home/argos and /root already exist by this point in the build, so
+# /etc/skel changes don't retroactively apply to them -- same reason
+# 0165-setup-zsh-powerlevel10k.hook.chroot copies explicitly instead
+# of relying on skel alone.
+install -d -m 0755 /home/argos/.config/gtk-3.0
+cp /etc/skel/.config/gtk-3.0/settings.ini /home/argos/.config/gtk-3.0/settings.ini
+chown -R argos:argos /home/argos/.config/gtk-3.0
+
+install -d -m 0755 /root/.config/gtk-3.0
+cp /etc/skel/.config/gtk-3.0/settings.ini /root/.config/gtk-3.0/settings.ini

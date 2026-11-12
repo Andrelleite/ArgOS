@@ -860,6 +860,30 @@ override
 autostart script, which would repeat the exact race-condition class of
 bug already found and fixed in `argos-set-wallpaper`.
 
+**Update from a real boot**: the window manager side was visibly
+working (rounded corners, left-side buttons) but the GTK3 side wasn't
+showing at all — not even subtly. The xsettings approach above depends
+on `xfsettingsd` (xfce4-settings' own daemon) actually propagating
+`Net/ThemeName` to running GTK3 apps over the XSETTINGS protocol at
+runtime; that mechanism is real (its autostart entry ships directly
+with the package, a hard dependency of `xfce4`, confirmed by reading
+the package contents) but it's still one more moving part than this
+needs. Checked two things directly rather than guessing further:
+compiled the real theme's SCSS myself with the exact `$theme: red`
+substitution its own installer makes (confirmed via `sed`+`sassc`, not
+assumed) and found the accent color genuinely baked into the resulting
+CSS throughout; then verified `~/.config/gtk-3.0/settings.ini` — a
+plain file every GTK3 app reads directly at startup, no daemon
+involved — actually gets honored, by building a minimal test theme and
+screenshotting a real GTK3 app (`xfce4-panel`) picking it up with zero
+xsettings/xfsettingsd involved at all. `0185-install-argos-gtk-theme.hook.chroot`
+now writes this file directly for `argos` and `root` (same
+`/etc/skel` + explicit-copy pattern as the zsh/Powerlevel10k hook,
+since skel changes don't retroactively apply to homes that already
+exist at that point in the build) as a static, timing-independent
+belt-and-suspenders alongside the xsettings approach, not a
+replacement for it.
+
 The icon theme is `Flat-Remix-Blue-Dark` — correcting an earlier,
 wrong claim from the previous pass that `Flat-Remix-Red-Dark` gave
 "visual coherence" with the red window theme. It doesn't: reading its
