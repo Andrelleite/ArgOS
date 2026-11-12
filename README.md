@@ -39,10 +39,10 @@ diagram is aspirational.
 │   Theme: ArgOS (GTK3 + xfwm4, macOS Tahoe-style, light, built from       │
 │     MacTahoe-gtk-theme) · MacTahoe-icon-theme (blue) -- static           │
 │     xfconf-perchannel XML                                                │
-│   Panel: top bar (menu · status icons · clock, macOS-menu-bar style) +   │
-│     bottom dock (xfce4-docklike-plugin · cpugraph · systemload ·         │
-│     netload · sensors) · tool-finder search                              │
-│     (argos-setup-panel-widgets, configured once via direct             │
+│   Panel: 3 top panels acting as one menu bar (menu+tool-finder left ·    │
+│     clock center · metrics+status icons right) + a centered,            │
+│     shrink-wrapped bottom dock (xfce4-docklike-plugin alone)             │
+│     (argos-setup-panel-widgets, configured once via direct               │
 │      xfconf-query writes)                                                │
 │   Desktop: ArgOS wallpaper (argos-set-wallpaper, any monitor layout) ·    │
 │     "Install ArgOS" icon → launches Calamares (graphical installer)      │
@@ -857,46 +857,75 @@ build risk, on a dedicated bottom panel.
 
 **The panel layout** (`config/includes.chroot/usr/local/bin/argos-setup-panel-widgets`,
 run once at first login, same marker-file-gated pattern as before) now
-defines two panels from scratch via direct `xfconf-query` writes,
-replacing whatever `kali-desktop-xfce` ships by default:
+defines **four** panels from scratch via direct `xfconf-query` writes,
+replacing whatever `kali-desktop-xfce` ships by default — three
+independently-anchored top panels that together read as one menu bar,
+plus the bottom dock:
 
-- **Top**: a slim (26px) macOS-menu-bar-style bar — Whisker Menu and the
-  tool-finder launcher on the left, an expanding transparent separator,
-  then a status-icon cluster (`indicator`, `pulseaudio`,
-  `power-manager-plugin`, `clock`) on the right, mirroring the
-  reference image's layout. `length-adjust=false` at a fixed `length=100`
-  — always full width, like a real menu bar.
-- **Bottom**: `xfce4-docklike-plugin`, an expanding separator, then the
-  system-monitoring widgets this project already had before this pivot
-  (`cpugraph`, `systemload`, `netload`, `xfce4-sensors-plugin`) pushed
-  to the right edge, so the dock itself stays uncluttered. Per direct
-  request, this is a real dock, not a second full-width bar:
-  `length-adjust=true` with a small base `length` makes it shrink-wrap
-  to whatever its plugins actually need, and plain `p=10` (no
-  left/right corner variant) centers a shrink-wrapped panel
-  horizontally by default — confirmed directly (sandbox test), not
-  assumed from the first test this position string was used in, which
-  happened to be full-width and so never actually exercised the
-  centering behavior.
+- **Top-left**: Whisker Menu + the tool-finder launcher.
+- **Top-center**: the clock, alone.
+- **Top-right**: system metrics (`cpugraph`, `systemload`, `netload`)
+  and the status-icon cluster (`indicator`, `pulseaudio`,
+  `power-manager-plugin`). Moved here from the bottom dock per direct
+  request — the dock is `xfce4-docklike-plugin` alone now, a real app
+  dock, not also a metrics bar. `xfce4-sensors-plugin` was dropped
+  from the default panel entirely (still installed, just not placed):
+  confirmed directly that it renders nothing visible in this sandbox,
+  idle or under real synthetic CPU load, but that's a container
+  (no real hwmon/ACPI sensors) limitation, not proof it's useless on
+  real hardware — same honest distinction as the compositing question
+  below.
+- **Bottom** (the dock): `xfce4-docklike-plugin` alone, shrink-wrapped
+  and centered, per direct request that it read as an actual dock, not
+  a second full-width bar.
 
-  Rounded corners come from a GTK CSS rule
-  (`gtk-3.0/gtk.css`, written by 0185 alongside `settings.ini`), not
-  an xfconf property — xfce4-panel has no corner-radius setting of its
-  own (confirmed by reading its real source via `strings`: no such
-  property exists). `#XfcePanelWindow { border-radius: 16px; }` is the
-  real selector this exact theme project's own `_xfce.scss` targets
-  for the panel background (`.xfce4-panel.background#XfcePanelWindow`),
-  confirmed by actually applying it live and screenshotting the
-  result, not trusted from the theme source alone. It's the same
-  global rule for both panels — xfce4-panel has no way to target one
-  panel instance differently in CSS — but that turns out not to
-  matter: a full-width panel's corners sit exactly at the screen edge,
-  where a border-radius has no room to visibly curve, so the top bar
-  renders perfectly square regardless, while the shrink-wrapped bottom
-  dock's real edges (in the middle of the screen) show the same radius
-  as a clean rounded pill. Confirmed directly with both panels
-  configured together in the same test, not reasoned through and
-  assumed.
+Three separate top panels, not one bar with an expanding separator on
+each side of the clock, because that was tried first and doesn't
+actually center anything: GTK splits the leftover space between two
+expanding separators equally regardless of how much *fixed* content
+sits on each side, so with far more content on the right (status
+icons + metrics) than the left (menu + tool-finder), the clock ended
+up visibly off-center — confirmed directly (sandbox screenshot), not
+worked out on paper and assumed correct.
+
+Getting three (four, with the dock) panels to actually anchor where
+intended took real, methodical verification, not a single lucky test:
+xfce4-panel's `position` string (`p=N;x=0;y=0`) codes were tested one
+by one against a lone shrink-wrapped panel to build a position map
+(an earlier attempt to recall the right codes from a C enum from
+memory was wrong, confirmed directly when the guessed codes didn't
+render where expected) — but that map *by itself* was misleading:
+combining panel-1 (`p=6`, top-left) with a second panel set to the
+code that tested as "top-center" *alone* (`p=8`) put that second panel
+at bottom-left instead, nowhere near top-center, once both existed
+together. `p=9` — which also tested as top-center alone — turned out
+to be a genuinely different slot that doesn't collide with `p=6`,
+confirmed by adding panels one at a time (then all four, with the
+dock) and checking the actual rendered position after each addition,
+not stopping at "it worked alone." (`p=6` itself was also a
+long-standing wrong assumption from much earlier in this project: it
+was believed to mean "plain top, spans full width," but it's top-left,
+and only ever looked like plain-top because it was always paired with
+`length=100%`, which fills the top edge either way regardless of
+which corner it's anchored from.)
+
+Rounded corners come from a GTK CSS rule (`gtk-3.0/gtk.css`, written
+by 0185 alongside `settings.ini`), not an xfconf property —
+xfce4-panel has no corner-radius setting of its own (confirmed by
+reading its real source via `strings`: no such property exists).
+`#XfcePanelWindow { border-radius: 16px; }` is the real selector this
+exact theme project's own `_xfce.scss` targets for the panel
+background (`.xfce4-panel.background#XfcePanelWindow`), confirmed by
+actually applying it live and screenshotting the result, not trusted
+from the theme source alone. It's the same global rule for every
+panel — xfce4-panel has no way to target one panel instance
+differently in CSS — but that turns out not to matter: a panel edge
+that sits exactly at the screen edge has no room for a border-radius
+to visibly curve, so each top panel's outer (screen-edge) corners stay
+square while its inner (floating, mid-screen) corners round off, and
+the fully shrink-wrapped dock and clock panels round on all four
+corners. Confirmed directly with all four panels configured together
+in the same test, not reasoned through and assumed.
 
 Two real bugs were found and fixed writing this, not just assumed
 away: the script's own `&`-backgrounding originally used `disown`
@@ -905,8 +934,8 @@ away: the script's own `&`-backgrounding originally used `disown`
 with exit 127 partway through on the real system (confirmed directly by
 running it under `sh`, not bash, which is what actually catches this
 class of bug). And a running `xfce4-panel` does **not** pick up a
-newly-added second panel from these xfconf writes on its own (confirmed
-directly: wrote panel-2 live against an already-running panel,
+newly-added panel from these xfconf writes on its own (confirmed
+directly: wrote a second panel live against an already-running panel,
 screenshotted before/after, identical) — it needs an actual restart,
 but `xfce4-panel --restart` hangs indefinitely in testing (a D-Bus RPC
 that never returns, the same class of CLI-hang already documented for
@@ -914,15 +943,33 @@ that never returns, the same class of CLI-hang already documented for
 launching a fresh one directly instead, which sidesteps that RPC and is
 confirmed directly to work.
 
+**On "glass"** — the frosted/translucent look the reference macOS
+Tahoe screenshots show (and was asked about directly): real,
+non-blurred translucency on the panel background is achievable (a
+`rgba()` background-color in the same `gtk.css` genuinely blends with
+whatever's behind the panel, confirmed directly), but true *blur*
+behind it is not something GTK3 or xfwm4 can do at all, full stop —
+not a configuration gap, an architectural one. GTK3's CSS engine
+predates backdrop-filter/blur entirely, and xfwm4's compositor only
+does alpha blending and drop shadows, no blur shader (the same reason
+GNOME Shell needs a separate "blur-my-shell" extension — it isn't
+built into that compositor either). Attempted the translucency part
+directly in a live test and hit real CSS-specificity trouble getting
+it applied *consistently*: a nested widget class
+(`.xfce4-panel.background`) paints its own opaque fill on top of the
+window-level background for some panels but not others, and sorting
+that out fully wasn't finished — not shipped half-working, left as a
+clearly-scoped follow-up instead of a guessed fix.
+
 What this still can't show: whether everything actually looks this
 clean once genuinely booted, real window-manager interaction behavior,
-compositor-dependent effects (Plank-style translucency would need one;
-this setup's `solid` opacity deliberately doesn't), or the exact
-anti-aliasing/hinting a real Xorg session produces — same honest
-caveat as everywhere else in this section, and this sandbox's own
-Xvfb (software `llvmpipe`, no real compositor) couldn't settle the
-compositing question either way. That's what the next real build and
-boot confirms.
+compositor-dependent effects (this setup's `solid` GTK theme opacity
+deliberately doesn't depend on one, but xfwm4's own frame rendering
+still does), or the exact anti-aliasing/hinting a real Xorg session
+produces — same honest caveat as everywhere else in this section, and
+this sandbox's own Xvfb (software `llvmpipe`, no real compositor)
+couldn't settle the compositing question either way. That's what the
+next real build and boot confirms.
 
 ### Tool menu: 8 flat categories instead of Kali's 64-entry MITRE tree
 

@@ -44,13 +44,20 @@ gvfs-fuse
 calamares
 calamares-settings-debian
 
-# Always-on system metrics panel widgets (CPU/RAM/network/temperature).
-# These are also in kali-desktop-xfce's own Recommends, but
-# --apt-recommends false drops them, so listed explicitly. lm-sensors is
-# what xfce4-sensors-plugin actually reads temperature data from.
+# Always-on system metrics panel widgets (CPU/RAM/network). These are
+# also in kali-desktop-xfce's own Recommends, but --apt-recommends
+# false drops them, so listed explicitly.
 xfce4-cpugraph-plugin
 xfce4-systemload-plugin
 xfce4-netload-plugin
+
+# xfce4-sensors-plugin + lm-sensors (temperature) -- still installed,
+# just not on the default panel (argos-setup-panel-widgets): it
+# rendered nothing visible in every sandbox test, idle or under real
+# synthetic load (no real hwmon/ACPI thermal sensors in a container --
+# may well work fine on real hardware or a real VM, that's just not
+# something this sandbox can verify either way). Addable later via
+# Panel Preferences if it does.
 xfce4-sensors-plugin
 lm-sensors
 

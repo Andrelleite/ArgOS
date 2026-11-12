@@ -1,12 +1,51 @@
 #!/bin/sh
 set -eu
 #
-# Defines ArgOS's own two-panel layout (replacing whatever
+# Defines ArgOS's own four-panel layout (replacing whatever
 # kali-desktop-xfce ships by default) to match the macOS-style look
-# built in 0185/0186: a slim top bar (menu, tool-finder search,
-# status-icon cluster, clock -- like a macOS menu bar) and a bottom
-# panel hosting a real dock-style taskbar plus the system-monitoring
-# widgets this project already had before that pivot.
+# built in 0185/0186: three independently-anchored top panels that
+# together read as one menu bar (menu + tool-finder search anchored
+# top-left, a clock anchored top-center, system-monitoring widgets +
+# status-icon cluster anchored top-right), and a bottom panel hosting
+# a real dock-style taskbar, nothing else.
+#
+# Three separate panels, not one bar with expanding separators on
+# each side of the clock, because that was tried first and doesn't
+# actually center the clock: GTK's box layout splits leftover space
+# between the two expanding separators EQUALLY regardless of how much
+# fixed-width content sits on each side, so with (as here) much more
+# content on the right (status icons + metrics) than the left (menu +
+# tool-finder), the clock ends up visibly off-center, shifted toward
+# the lighter side by half the imbalance -- confirmed directly
+# (sandbox screenshot, not just worked out on paper) before switching
+# to separately-anchored panels, which anchor exactly regardless of
+# how much content is on either side.
+#
+# The "p=" position codes for this came from testing every value
+# 1-12 individually against a shrink-wrapped single-plugin panel, not
+# assumed from any position's name or recalled from memory -- an
+# earlier attempt to recall the right codes from a C enum was wrong
+# (confirmed directly: the guessed codes didn't match what actually
+# rendered). (p=6 in particular was assumed, from much earlier in
+# this project, to mean "plain top, spans full width" -- it doesn't;
+# it's top-left, and only ever looked like plain-top because it was
+# always paired with length=100%, which fills the top edge either way
+# regardless of which corner it's anchored from.)
+#
+# That per-position testing isn't the whole story, though: with
+# MULTIPLE panels defined together, xfce4-panel apparently groups
+# some position codes into shared "slots" and bumps the loser
+# somewhere else entirely, rather than just rendering both at their
+# literal requested spot -- confirmed directly, not assumed, when
+# panel-1 (p=6) and a second panel set to the code that alone tested
+# as "top-center" (p=8) together put the second panel at
+# BOTTOM-LEFT, nowhere near top-center, even though each looked
+# correct tested alone. p=9 -- which also tested as "top-center"
+# alone -- turned out to be a genuinely different slot that doesn't
+# collide with p=6, confirmed by testing panel-1+panel-2+panel-3
+# together (and then all four, with the dock) and checking the actual
+# rendered positions each time a panel was added, not stopping at
+# "it worked with one panel so it'll work combined."
 #
 # The tool-finder launcher plugin (originally a separate script,
 # argos-setup-toolfinder-launcher, now removed) is defined here too,
@@ -70,17 +109,16 @@ xq() {
     xfconf-query -c xfce4-panel "$@"
 }
 
-# --- Panel 1: top bar, macOS-menu-bar style ---------------------------
+xq -p /panels --create -t int -s 1 -t int -s 2 -t int -s 3 -t int -s 4 --force-array
 
-xq -p /panels --create -t int -s 1 -t int -s 2 --force-array
+# --- Panel 1: top-left -- menu + tool-finder search ---------------------
 
 xq -p /panels/panel-1/position --create -t string -s "p=6;x=0;y=0"
-xq -p /panels/panel-1/length --create -t int -s 100
-xq -p /panels/panel-1/length-adjust --create -t bool -s false
+xq -p /panels/panel-1/length --create -t int -s 10
+xq -p /panels/panel-1/length-adjust --create -t bool -s true
 xq -p /panels/panel-1/size --create -t int -s 26
 xq -p /panels/panel-1/position-locked --create -t bool -s true
-xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 -t int -s 2 \
-    -t int -s 3 -t int -s 4 -t int -s 5 -t int -s 6 --force-array
+xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 --force-array
 
 xq -p /plugins/plugin-1 --create -t string -s "whiskermenu"
 xq -p /plugins/plugin-7 --create -t string -s "launcher"
@@ -93,46 +131,66 @@ xq -p /plugins/plugin-7 --create -t string -s "launcher"
 # already-tested order the old argos-setup-toolfinder-launcher script
 # used for this exact property, is the order that actually works.
 xq -p /plugins/plugin-7/items -t string -s "argos-toolfinder-gui.desktop" --create --force-array
-xq -p /plugins/plugin-2 --create -t string -s "separator"
-xq -p /plugins/plugin-2/expand --create -t bool -s true
-xq -p /plugins/plugin-2/style --create -t int -s 0
-xq -p /plugins/plugin-3 --create -t string -s "indicator"
-xq -p /plugins/plugin-4 --create -t string -s "pulseaudio"
-xq -p /plugins/plugin-5 --create -t string -s "power-manager-plugin"
-xq -p /plugins/plugin-6 --create -t string -s "clock"
 
-# --- Panel 2: bottom dock + the system-monitoring widgets this ---------
-# --- project already had before the macOS-style pivot ------------------
+# --- Panel 2: top-center -- clock, exactly centered regardless of ------
+# --- how much content panel-1/panel-3 end up with -----------------------
 
-# p=10 confirmed directly (sandbox test) to render at the bottom
-# edge, the same way p=6 (used for panel-1 above) was confirmed to
-# render at the top -- not assumed from the property name alone. Per
-# direct request, this is a real dock, not a second full-width bar:
-# length-adjust=true + a small base length (10%, not 100%) makes the
-# panel shrink-wrap to whatever its plugins actually need instead of
-# stretching edge-to-edge -- confirmed directly (sandbox test) that
-# plain "p=10" (no left/right corner variant) centers a shrink-wrapped
-# panel horizontally by default, not just the plugin-less full-width
-# case this was first tested with. The rounded-pill look this enables
-# comes from a GTK CSS rule in 0185-install-argos-gtk-theme's
-# gtk-3.0/gtk.css, not an xfconf property -- xfce4-panel has no
-# corner-radius property of its own.
-xq -p /panels/panel-2/position --create -t string -s "p=10;x=0;y=0"
+xq -p /panels/panel-2/position --create -t string -s "p=9;x=0;y=0"
 xq -p /panels/panel-2/length --create -t int -s 10
 xq -p /panels/panel-2/length-adjust --create -t bool -s true
-xq -p /panels/panel-2/size --create -t int -s 42
+xq -p /panels/panel-2/size --create -t int -s 26
 xq -p /panels/panel-2/position-locked --create -t bool -s true
-xq -p /panels/panel-2/plugin-ids --create -t int -s 10 -t int -s 11 -t int -s 12 \
-    -t int -s 13 -t int -s 14 -t int -s 15 --force-array
+xq -p /panels/panel-2/plugin-ids --create -t int -s 6 --force-array
 
-xq -p /plugins/plugin-10 --create -t string -s "docklike"
-xq -p /plugins/plugin-11 --create -t string -s "separator"
-xq -p /plugins/plugin-11/expand --create -t bool -s true
-xq -p /plugins/plugin-11/style --create -t int -s 0
+xq -p /plugins/plugin-6 --create -t string -s "clock"
+
+# --- Panel 3: top-right -- system metrics + status-icon cluster --------
+# Moved here from the bottom dock panel per direct request: that
+# panel is docklike-only now, a real app dock, not also a metrics bar.
+
+xq -p /panels/panel-3/position --create -t string -s "p=1;x=0;y=0"
+xq -p /panels/panel-3/length --create -t int -s 10
+xq -p /panels/panel-3/length-adjust --create -t bool -s true
+xq -p /panels/panel-3/size --create -t int -s 26
+xq -p /panels/panel-3/position-locked --create -t bool -s true
+xq -p /panels/panel-3/plugin-ids --create -t int -s 12 -t int -s 13 -t int -s 14 \
+    -t int -s 3 -t int -s 4 -t int -s 5 --force-array
+
 xq -p /plugins/plugin-12 --create -t string -s "cpugraph"
 xq -p /plugins/plugin-13 --create -t string -s "systemload"
 xq -p /plugins/plugin-14 --create -t string -s "netload"
-xq -p /plugins/plugin-15 --create -t string -s "xfce4-sensors-plugin"
+# xfce4-sensors-plugin dropped from the default panel (still
+# installed -- see desktop.list.chroot -- and addable later via
+# Panel Preferences): confirmed directly that it renders nothing
+# visible in this sandbox's container, but that's a real, named
+# limitation of the sandbox (no real hwmon/ACPI thermal sensors in a
+# container), not proof it's useless on real hardware or even a real
+# VM -- same honest distinction as the compositing/shadow questions
+# elsewhere in this project. Dropped anyway per the "too blended and
+# rough" feedback this was part of: fewer, more legible widgets,
+# rather than one more that might just be visually empty.
+xq -p /plugins/plugin-3 --create -t string -s "indicator"
+xq -p /plugins/plugin-4 --create -t string -s "pulseaudio"
+xq -p /plugins/plugin-5 --create -t string -s "power-manager-plugin"
+
+# --- Panel 4: bottom dock, docklike only --------------------------------
+
+# p=10 confirmed directly (sandbox test) to render at the bottom,
+# centered. Per direct request, this is a real dock, not a second
+# full-width bar: length-adjust=true + a small base length (10%, not
+# 100%) makes the panel shrink-wrap to whatever its plugins actually
+# need instead of stretching edge-to-edge. The rounded-pill look this
+# enables comes from a GTK CSS rule in 0185-install-argos-gtk-theme's
+# gtk-3.0/gtk.css, not an xfconf property -- xfce4-panel has no
+# corner-radius property of its own.
+xq -p /panels/panel-4/position --create -t string -s "p=10;x=0;y=0"
+xq -p /panels/panel-4/length --create -t int -s 10
+xq -p /panels/panel-4/length-adjust --create -t bool -s true
+xq -p /panels/panel-4/size --create -t int -s 42
+xq -p /panels/panel-4/position-locked --create -t bool -s true
+xq -p /panels/panel-4/plugin-ids --create -t int -s 10 --force-array
+
+xq -p /plugins/plugin-10 --create -t string -s "docklike"
 
 # A running xfce4-panel does NOT pick up a newly-added panel-2 (or
 # its plugins) from these xfconf writes on its own -- confirmed
