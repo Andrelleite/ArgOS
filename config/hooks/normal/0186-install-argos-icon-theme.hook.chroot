@@ -1,0 +1,58 @@
+#!/bin/sh
+set -e
+
+# Pairs with 0185-install-argos-gtk-theme.hook.chroot: MacTahoe-icon-
+# theme (github.com/vinceliuice/MacTahoe-icon-theme, same author as
+# the GTK theme) gives the rounded, accent-colored folder icons that
+# are part of the reference "macOS Tahoe" look this was built
+# against -- the GTK3 theme alone only covers window chrome/widgets,
+# not folder/file icons, and the previous Flat-Remix-Blue-Dark icon
+# theme (picked for a dark theme, before this pivot) doesn't match a
+# light accent-colored look at all.
+#
+# No sassc/sed compile step here, unlike the GTK theme -- confirmed
+# by reading install.sh directly: icon variants are plain pre-rendered
+# SVGs under colors/color-<accent>/, swapped into places/scalable by
+# simple `cp`, not generated from a template at install time.
+#
+# -t blue picks the accent color (colors/color-blue/, matching the
+# GTK theme's own "default" MacTahoe accent, which is also blue).
+#
+# install.sh always builds all three COLOR_VARIANTS for whatever
+# accent is requested (confirmed by reading it directly: there's no
+# CLI flag to pick a subset, colors[] defaults to the full array) --
+# so this one invocation produces ArgOS-blue (the real, full icon
+# set; its symbolic/status icons are colored for a DARK panel),
+# ArgOS-blue-light (a thin overlay: same accent-colored folder icons
+# as the base, symlinked back to it, but with status/symbolic icons
+# recolored dark-on-transparent for a LIGHT panel -- confirmed by
+# reading the '-light' branch of install(), which does exactly that
+# recolor), and ArgOS-blue-dark (not used here, removed below).
+#
+# ArgOS's own panel is light (the macOS-style top bar), so
+# ArgOS-blue-light is the correct variant for the panel/whisker-menu
+# status icons -- not the project's own undecorated default, which
+# would render near-invisible light-grey icons on a light panel.
+#
+# Symlinked to a stable "ArgOS" name for the same reason as the GTK
+# theme: xsettings.xml / lightdm-gtk-greeter.conf / gtk-3.0/
+# settings.ini all need one name that won't silently drift.
+
+git clone --depth=1 https://github.com/vinceliuice/MacTahoe-icon-theme /usr/src/argos-icon-theme-build
+cd /usr/src/argos-icon-theme-build
+bash install.sh -d /usr/share/icons -n ArgOS -t blue
+
+cd /usr/share/icons
+rm -rf ArgOS-blue-dark
+
+if [ -d ArgOS-blue-light/places ]; then
+    ln -sfn ArgOS-blue-light ArgOS
+else
+    echo "0186-install-argos-icon-theme: expected ArgOS-blue-light not found -- MacTahoe-icon-theme's install.sh naming may have changed" >&2
+    exit 1
+fi
+
+cd /
+rm -rf /usr/src/argos-icon-theme-build
+
+gtk-update-icon-cache -f -t /usr/share/icons/ArgOS-blue || true

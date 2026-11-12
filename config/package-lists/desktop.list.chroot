@@ -136,3 +136,42 @@ thunar-volman
 # fatal part -- this was already visibly missing, just not the
 # headline symptom.
 tumbler
+
+# The macOS-style look (0185/0186) is two pieces: a GTK3+xfwm4 theme
+# and an icon theme. The rest of this block is the third piece --
+# the actual panel/dock layout to put them on, configured at first
+# login by argos-setup-panel-widgets (xfconf-query directly, not
+# hand-authored XML -- same reasoning as that script's own header
+# comment: the panel/plugin-ID schema is fragile and version-
+# dependent, so this uses the panel's own real provisioning path).
+#
+# xfce4-docklike-plugin -- a bottom-panel dock/taskbar (pinned +
+# running apps, grouped by icon). Xfce has no dock of its own, and
+# the obvious real dock apps (plank, cairo-dock) were tried first and
+# dropped: confirmed directly against the real kali-rolling archive
+# (scripts/argos-preflight.sh), neither one actually exists there --
+# this is the one real, packaged alternative that does. Won't have
+# Plank's own rounded/translucent cairo-rendered look, but is an
+# actually-shipped, actively-maintained Xfce panel plugin (part of
+# the xfce4-panel-plugins ecosystem, gitlab.xfce.org) with no build
+# risk, unlike building Plank's largely-unmaintained Vala/meson
+# project from source.
+xfce4-docklike-plugin
+
+# xfce4-pulseaudio-plugin, xfce4-power-manager-plugins,
+# xfce4-indicator-plugin -- the macOS-style top-bar status-icon
+# cluster (volume/battery/notification-area icons next to the
+# clock). None of these are pulled in by kali-desktop-xfce's default
+# panel layout, which uses a plain systray instead.
+xfce4-pulseaudio-plugin
+xfce4-power-manager-plugins
+xfce4-indicator-plugin
+
+# network-manager-applet -- nm-applet, so the network-manager
+# package already in base.list.chroot actually has a status icon to
+# show in the indicator plugin above. Without this, NetworkManager
+# still works, it's just invisible from the panel. (network-manager-
+# gnome was tried first and doesn't exist in kali-rolling under that
+# name -- confirmed against the real archive -- this is the real
+# package name there.)
+network-manager-applet

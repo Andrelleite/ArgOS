@@ -3,7 +3,7 @@
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
     <property name="ThemeName" type="string" value="ArgOS"/>
-    <property name="IconThemeName" type="string" value="Flat-Remix-Blue-Dark"/>
+    <property name="IconThemeName" type="string" value="ArgOS"/>
   </property>
   <property name="Xft" type="empty">
     <property name="HintStyle" type="string" value="hintslight"/>

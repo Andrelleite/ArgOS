@@ -34,12 +34,16 @@ diagram is aspirational.
                                     │
 ┌───────────────────────────────────▼──────────────────────────────────────┐
 │ DESKTOP / UI  (optional -- the live session boots straight into this)    │
-│   lightdm (autologin) → Xfce session → Whisker Menu (kali-menu)          │
-│   Theme: ArgOS (GTK3 + xfwm4, macOS-like, built from WhiteSur-gtk-theme)  │
-│     Flat-Remix-Blue-Dark icons -- static xfconf-perchannel XML           │
-│   Panel: cpugraph · systemload · netload · sensors · tool-finder search  │
+│   lightdm (autologin) → Xfce session → Whisker Menu (ArgOS's own,        │
+│     8 flat categories, replaces kali-menu's 64-entry MITRE tree)         │
+│   Theme: ArgOS (GTK3 + xfwm4, macOS Tahoe-style, light, built from       │
+│     MacTahoe-gtk-theme) · MacTahoe-icon-theme (blue) -- static           │
+│     xfconf-perchannel XML                                                │
+│   Panel: top bar (menu · status icons · clock, macOS-menu-bar style) +   │
+│     bottom dock (xfce4-docklike-plugin · cpugraph · systemload ·         │
+│     netload · sensors) · tool-finder search                              │
 │     (argos-setup-panel-widgets / argos-setup-toolfinder-launcher,        │
-│      added once via `xfce4-panel --add=`)                                │
+│      configured once via direct xfconf-query writes)                     │
 │   Desktop: ArgOS wallpaper (argos-set-wallpaper, any monitor layout) ·    │
 │     "Install ArgOS" icon → launches Calamares (graphical installer)      │
 └───────────────────────────────────┬──────────────────────────────────────┘
@@ -476,45 +480,32 @@ separate, optional step, not something this fix covers.)
 
 The panel always shows CPU, RAM, network, and temperature via real
 Xfce panel plugins (`xfce4-cpugraph-plugin`, `xfce4-systemload-plugin`,
-`xfce4-netload-plugin`, `xfce4-sensors-plugin` +
-`lm-sensors`) — not a custom widget. `config/includes.chroot/usr/local/bin/argos-setup-panel-widgets`
-adds them once (guarded by a marker file, so it doesn't duplicate
-plugin instances on every login) via `xfce4-panel --add=<plugin>`,
-using each plugin's real internal name (confirmed from its shipped
-`.desktop` filename, not assumed) rather than a hand-authored xfconf
-panel-layout XML, which is a notoriously fragile schema to get right
-blind.
+`xfce4-netload-plugin`, `xfce4-sensors-plugin` + `lm-sensors`) — not a
+custom widget, on the bottom (dock) panel's right edge. See
+"GTK3 + window theme" above for the full two-panel layout
+(`config/includes.chroot/usr/local/bin/argos-setup-panel-widgets`) this
+is now part of: direct `xfconf-query` property writes rather than
+`xfce4-panel --add=`, confirmed end-to-end by actually running the
+real script (not a re-typed approximation) against a disposable Xvfb +
+dbus + xfconfd + xfwm4 session and screenshotting the result (see
+`assets/argos-panel-layout.png`) — including catching two real bugs
+that approach would have shipped silently: a `dash`-incompatible
+`disown` call (exit 127 under `/bin/sh` on the real system, only
+visible by actually running it under `sh`, not bash) and a live panel
+not picking up a newly-added second panel without being restarted,
+where the obvious fix (`xfce4-panel --restart`) itself hangs.
 
-Honest limit on verification here: I tried to confirm this against a
-real, live Xfce panel (installed the actual packages, ran a virtual
-X11 display with Xvfb, started `xfconfd` and `xfce4-panel` by hand) and
-hit session-infrastructure gaps in that improvised setup — no systemd
-user session, no polkit, no real session manager — that a real booted
-ArgOS image has and this sandbox doesn't, so the test wasn't
-conclusive either way. The plugin package names and the `--add=`
-mechanism itself are real, standard, long-documented Xfce features, not
-guessed — but whether this specific script actually produces a
-populated panel on first login is unverified, the same honest caveat
-as the rest of this desktop/installer section. It also won't look
-exactly like a specific reference screenshot someone might have in
-mind — these are Xfce's own stock plugins with their own default
-styling, not custom-icon widgets recreating another design pixel for
-pixel.
+Still unverified: whether this looks and behaves identically on a
+real boot, not this sandbox's disposable Xvfb session — same honest
+caveat as the rest of this desktop/installer section.
 
-**Found during a systematic audit, not another boot report**: this
-script (and `argos-setup-toolfinder-launcher`) had the exact same bug
-class already found and fixed in `argos-set-wallpaper` — `xfconf-query
--c xfce4-panel -p /panels -l` returns exit 0 even for a channel that's
-*never been touched at all* (confirmed directly), so the old retry
-loop broke out on its first attempt regardless of whether xfce4-panel
-had created a real panel yet. It happened to not visibly break in
-practice (xfce4-panel populates its own defaults fast enough, unlike
-xfdesktop), but "happened to not break" isn't the same as "correct,"
-so both scripts now wait for a real `/panels/panel-N` property to
-exist. Both also now wait for `xfwm4` to actually be running first —
-`xfce4-panel --add=` genuinely needs a window manager present
-(confirmed directly: without one, it fails an internal assertion and
-does nothing), which neither script was checking for at all before.
+The retry-loop bug class already found and fixed in
+`argos-set-wallpaper` — `xfconf-query -c xfce4-panel -p /panels -l`
+returns exit 0 even for a channel that's *never been touched at all*
+(confirmed directly) — was already fixed here and in
+`argos-setup-toolfinder-launcher` in an earlier pass, and both still
+wait for a real `/panels/panel-N` property and for `xfwm4` to actually
+be running before writing anything.
 
 ### Default resolution
 
@@ -575,11 +566,12 @@ Per direct request:
 
 **This means the build now needs network access to more than
 `kali.download`**: `packages.microsoft.com`, `download.sublimetext.com`,
-and `github.com`/`codeload.github.com` (for the Powerlevel10k and
-WhiteSur GTK theme clones), all reachable from the build host, not
-just the machine running `argos-preflight.sh`. If your build host sits
-behind a restrictive firewall, these three are the ones to open
-alongside Kali's own mirror.
+and `github.com`/`codeload.github.com` (for the Powerlevel10k,
+MacTahoe-gtk-theme, and MacTahoe-icon-theme clones), all reachable
+from the build host, not just the machine running
+`argos-preflight.sh`. If your build host sits behind a restrictive
+firewall, these three are the ones to open alongside Kali's own
+mirror.
 
 None of this — the external repos, the shell/prompt setup, the default-
 app wiring — has been verified by an actual build; same honest-limits
@@ -740,175 +732,140 @@ touched was still winning:
   single-slide slideshow built from the same logo, ArgOS's own
   name/URLs) and `settings.conf` now points `branding: argos` at it.
 
-### GTK3 + window theme: macOS-like, rounded, still a flat config override
+### GTK3 + window theme: macOS Tahoe-style, light, still a flat config override
 
-![ArgOS theme concept mockup — terminal and file-manager windows with rounded corners, left-side traffic-light buttons, and a red accent on a dark background](assets/argos-theme-mockup.png)
+![ArgOS GTK3 theme — a real zenity dialog with a light, rounded, blue-accented style](assets/argos-theme-dialog.png)
+![ArgOS xfwm4 window decoration — a real terminal window with macOS-style traffic-light buttons, top-right](assets/argos-theme-window.png)
+![ArgOS panel layout — the macOS-style top bar and the bottom dock panel, both configured by the real argos-setup-panel-widgets script](assets/argos-panel-layout.png)
 
-**This is a mockup, not a real screenshot** — this sandbox can't run
-the actual compiled theme (no real display stack, and executing a
-freshly cloned project's own install script here is intentionally
-restricted). First pass at this mockup used CSS approximations for
-several things (button shapes, icon colors, font, terminal prompt);
-asked directly whether it was faithful, the honest answer was no, so
-it was rebuilt using the real asset files instead of redrawing them:
+**These are real screenshots**, not mockups: a disposable X session in
+this sandbox (Xvfb + dbus + xfconfd + xfwm4), the actual compiled
+theme (built by hand-replicating `install.sh`'s real `sed`+`sassc`+`cp`
+steps rather than executing a freshly-cloned project's own install
+script, which this sandbox intentionally restricts), and real apps
+(`zenity`, `xterm`, `xfce4-panel`) screenshotted picking it up.
 
-- **Traffic-light buttons** — the actual `close-active.png`/
-  `hide-active.png`/`maximize-active.png` PNGs from WhiteSur's own
-  `assets-Dark` set, not CSS circles.
-- **Folder/file icons** — the real `Flat-Remix-Blue-Dark` SVGs, not
-  generic colored squares. This also caught a real mistake in the
-  *actual build*, not just the mockup: `Flat-Remix-Red-Dark`
-  (previously configured as the icon theme) turns out to
-  `Inherits=Flat-Remix-Blue-Dark` for everything except a handful of
-  Kali-specific app icons (confirmed by reading its `index.theme`
-  directly) — so folders would have rendered blue regardless, with
-  only a few menu icons tinted red. The claimed "visual coherence"
-  wasn't real. Fixed by switching `IconThemeName` to
-  `Flat-Remix-Blue-Dark` outright, the theme actually in effect either
-  way.
-- **The terminal prompt** — the real `p10k-rainbow` preset's actual
-  segment structure (`dir` + `vcs`, powerline-style colored blocks with
-  triangle separators, not a generic "user on host in dir" guess),
-  with colors read from the preset file itself (`#3465A4` dir
-  background, `#4e9a06` clean-vcs background) and the real triangle
-  separator glyphs rendered with the real Nerd Fonts symbol font. That
-  last part surfaced a second real, previously-undiscovered bug: the
-  `rainbow` preset sets `POWERLEVEL9K_MODE=nerdfont-complete`, which
-  needs thousands of Private-Use-Area glyphs that plain Fira Code
-  doesn't contain (confirmed directly — the real shipped font has only
-  23 PUA codepoints total). Without a Nerd Font, the real terminal
-  would have shown missing-glyph boxes instead of icons, not the
-  polished look the preset is designed for. Fixed by adding
-  `fonts-nerd-symbols` (`desktop.list.chroot`) — a fontconfig-level
-  fallback, not a replacement font, whose shipped config already
-  aliases "Fira Code"/"Fira Code Medium" to it.
-- **Window chrome** — the real 28px title-bar height, `#373737`
-  title-bar color, and ~10px corner radius, read from the actual
-  theme/asset files rather than chosen by eye. **Terminal
-  background/text colors** (`#000000`/`#aaaaaa`) are Terminator's own
-  real shipped defaults, confirmed from its source
-  (`terminatorlib/config.py`), not the GTK theme's colors.
-- **Fonts** — the real Cantarell, Fira Code, and Nerd Fonts symbol
-  files, loaded directly rather than whatever Chromium's headless
-  environment had on hand.
+This pivoted from an earlier, dark, red-accented pass (built on
+[WhiteSur-gtk-theme](https://github.com/vinceliuice/WhiteSur-gtk-theme))
+to a direct, explicit request for something closer to **macOS Tahoe**:
+light, not dark. The new theme is
+[MacTahoe-gtk-theme](https://github.com/vinceliuice/MacTahoe-gtk-theme)
+— by the same author as WhiteSur, explicitly "Based on WhiteSur GTK
+Theme" per its own README (same install mechanism, same real xfwm4
+`themerc` + PNG window-button assets per color variant, confirmed by
+reading `libs/lib-install.sh` directly), but its own default accent is
+described as "Tahoe-like" where WhiteSur's is "BigSur-like" — a
+deliberate clone of the newer look, not a reskin of the older one.
+Built with `-c Light -o solid --round -t default`
+(`config/hooks/normal/0185-install-argos-gtk-theme.hook.chroot`):
+the light color variant, `solid` turns off the theme's transparency
+(so the GTK3 widgets don't depend on real desktop compositing being
+active to read correctly), `--round` keeps maximized windows'
+corners rounded, and the project's own default "Tahoe-like" blue
+accent.
 
-What it still can't show: whether everything actually looks this
-clean once genuinely booted, real window-manager interaction
-behavior, or the exact anti-aliasing/hinting a real Xorg session
-produces — that's still what the next real build and boot confirms,
-same honest caveat as everywhere else in this section. But unlike the
-first pass, every pixel here traces back to a real file this project
-actually ships or builds, not an approximation.
+The icon theme pivoted too, for the same reason: `Flat-Remix-Blue-Dark`
+was picked for the old dark theme and doesn't match a light,
+accent-colored look at all. It's now
+[MacTahoe-icon-theme](https://github.com/vinceliuice/MacTahoe-icon-theme)
+(`config/hooks/normal/0186-install-argos-icon-theme.hook.chroot`),
+built with `-t blue` to match the GTK theme's own accent. Reading
+`install.sh` directly surfaced a real detail that would've been easy to
+get wrong by guessing: it always builds all three of its "color
+variants" for whatever accent is requested — the base set (status/panel
+icons colored for a **dark** panel), a `-light` overlay (same
+accent-colored folder icons, symlinked back to the base, but with
+status icons recolored dark-on-transparent for a **light** panel), and
+a `-dark` overlay (unused here, removed). Since ArgOS's own panel is
+now light, `ArgOS-blue-light` — not the project's own undecorated
+default — is the variant that's actually correct; the base
+`ArgOS-blue`'s status icons would render near-invisible light-grey on a
+light panel. Confirmed directly by hand-replicating both the base and
+`-light` install steps and checking the real folder/symlink output, not
+assumed from reading the install script alone.
 
-Window chrome, buttons, menus, and scrollbars are ArgOS's own too — not
-just the wallpaper/icons/login background. Per direct request for a
-macOS-like look (rounded corners, traffic-light window buttons) that
-stays light on resources, this is built at image-build time from
-[WhiteSur-gtk-theme](https://github.com/vinceliuice/WhiteSur-gtk-theme)
-(`config/hooks/normal/0185-install-argos-gtk-theme.hook.chroot`) — an
-actively-maintained project built specifically to clone macOS's look.
-(An earlier pass used a different upstream theme, Graphite, for a flat
-red/dark look without the rounded-corner request; this replaced it
-rather than running both, since xfwm4 only has one active theme at a
-time anyway.) Confirmed by reading `libs/lib-install.sh` directly, not
-the README (which barely mentions Xfce and focuses on GNOME): it
-genuinely builds a real xfwm4 theme with its own `themerc` and
-per-button PNG assets, not just GTK widgets, and specifically patches
-the Whisker Menu's appearance (`fix_whiskermenu`) — real Xfce support,
-not something bolted on from a GNOME-only project. `sassc` (already in
-`desktop.list.chroot`) is the only real build dependency, same as the
-previous theme.
+Window buttons are on the **right**, macOS-order (hide, maximize,
+close — `button_layout=|HMC` in `xfwm4.xml`), a deliberate change from
+the previous pass's left-side placement: the actual reference image
+this was built against shows top-right traffic lights, not top-left
+(confirmed directly — MacTahoe's own screenshots show the same).
+`use_compositing=true` (already set from the previous pass) stays on;
+`solid` opacity means the GTK3 widgets don't depend on it, but xfwm4's
+own frame rendering still benefits from it.
 
-Built with `-t red -c dark -m --round --darker`: ArgOS's own red accent
-on a dark base (not the project's default macOS blue, to stay
-consistent with Plymouth/GRUB/wallpapers), `-m` for the Monterey-style
-window-button icons, `--round` so maximized windows keep rounded
-corners instead of snapping square, `--darker` pushing the base closer
-to the near-black used everywhere else. Only this one color/shade
-combination is built, not the dozens the project ships source for.
-
-This project's folder-naming logic turned out to be more involved than
-the previous theme's (`name+color+opacity+alt+theme+scheme`, all
-concatenated — confirmed by reading `install_theemy()` directly).
-Rather than hardcode a guessed-at final folder name and risk it
-silently drifting from whatever a future `git clone` of an
-actively-developed project actually produces, the hook finds the built
-theme by what it actually contains (a real `xfwm4` subdirectory,
-excluding the `-hdpi`/`-xhdpi` sibling folders the installer also
-builds) and points a stable `ArgOS` symlink at it — tested directly
-against a simulated directory layout before trusting it, not just
-reasoned through. `xsettings.xml`/`xfwm4.xml` reference that stable
-name, not the project's own internal naming scheme.
-
-Rounded corners need compositing, so `xfwm4.xml` now also sets
-`use_compositing=true` explicitly (previously relying on xfwm4's own
-compiled-in default) along with a deliberately light set of settings —
-full `frame_opacity` (opaque frames render cheaper than translucent
-ones) and no popup shadows (popups are frequent/ephemeral; skipping
-their shadow cuts rendering overhead without a visible loss) — aimed at
-keeping the look without paying for effects that don't matter. Window
-buttons moved to the **left** side in macOS order — close, minimize,
-maximize (`button_layout=CHM|O`) — rather than Xfce's own
-menu-left/buttons-right default.
-
-Applied as the actual default via a static xfconf-perchannel XML
+Applied the same way as before: a static xfconf-perchannel XML
 override
 (`config/includes.chroot/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/{xsettings,xfwm4}.xml`)
-— the same mechanism already confirmed real elsewhere in this project
-(it's one of the exact files `kali-themes`' own postinst diverts to set
-*its* `Kali-Dark` default), not another login-time `xfconf-query`
-autostart script, which would repeat the exact race-condition class of
-bug already found and fixed in `argos-set-wallpaper`.
+for `ThemeName`/`IconThemeName`, plus `~/.config/gtk-3.0/settings.ini`
+written directly by the hook (same `/etc/skel` + explicit-copy pattern
+as the zsh/Powerlevel10k hook) as a timing-independent belt-and-
+suspenders alongside it, with `gtk-application-prefer-dark-theme` now
+`false` — leaving it `true` from the old dark pass would make GTK3 apps
+look for the theme's separate dark CSS instead of the one actually
+built here. This setup is also what resolved a real, previously
+unresolved anomaly from the WhiteSur pass: `zenity` dialogs weren't
+picking up the theme via `settings.ini` even with a correct, verified
+config. With MacTahoe's build, the same mechanism (confirmed directly:
+`settings.ini` alone, no `GTK_THEME` env override) works — screenshotted
+above.
 
-**Update from a real boot**: the window manager side was visibly
-working (rounded corners, left-side buttons) but the GTK3 side wasn't
-showing at all — not even subtly. The xsettings approach above depends
-on `xfsettingsd` (xfce4-settings' own daemon) actually propagating
-`Net/ThemeName` to running GTK3 apps over the XSETTINGS protocol at
-runtime; that mechanism is real (its autostart entry ships directly
-with the package, a hard dependency of `xfce4`, confirmed by reading
-the package contents) but it's still one more moving part than this
-needs. Checked two things directly rather than guessing further:
-compiled the real theme's SCSS myself with the exact `$theme: red`
-substitution its own installer makes (confirmed via `sed`+`sassc`, not
-assumed) and found the accent color genuinely baked into the resulting
-CSS throughout; then verified `~/.config/gtk-3.0/settings.ini` — a
-plain file every GTK3 app reads directly at startup, no daemon
-involved — actually gets honored, by building a minimal test theme and
-screenshotting a real GTK3 app (`xfce4-panel`) picking it up with zero
-xsettings/xfsettingsd involved at all. `0185-install-argos-gtk-theme.hook.chroot`
-now writes this file directly for `argos` and `root` (same
-`/etc/skel` + explicit-copy pattern as the zsh/Powerlevel10k hook,
-since skel changes don't retroactively apply to homes that already
-exist at that point in the build) as a static, timing-independent
-belt-and-suspenders alongside the xsettings approach, not a
-replacement for it.
+**The dock.** The previous pass left this out: Plank (macOS's dock
+equivalent) isn't in Kali's repository at all (confirmed directly, not
+assumed). Checked again for this pass, along with the obvious
+alternative — cairo-dock is *also* absent from kali-rolling (confirmed
+directly against the real mirror via `scripts/argos-preflight.sh`, not
+assumed from this project's Ubuntu-based test sandbox, which has its
+own, different package set and would have given a false answer).
+Building Plank from source was considered and rejected: its upstream is
+largely unmaintained (part of why Debian/Kali dropped it), and it's a
+Vala/meson project with no way to locally verify the build result
+first, a meaningfully bigger risk than anything else in this section.
+Used [xfce4-docklike-plugin](https://gitlab.xfce.org/panel-plugins/xfce4-docklike-plugin)
+instead — a real, packaged, actively-maintained Xfce panel plugin
+(confirmed resolving against kali-rolling) that groups pinned and
+running apps by icon, taskbar-style. It won't have Plank's own
+rounded/translucent cairo-rendered look, but it's a real dock with no
+build risk, on a dedicated bottom panel.
 
-The icon theme is `Flat-Remix-Blue-Dark` — correcting an earlier,
-wrong claim from the previous pass that `Flat-Remix-Red-Dark` gave
-"visual coherence" with the red window theme. It doesn't: reading its
-`index.theme` directly shows `Inherits=Flat-Remix-Blue-Dark` for
-everything except a handful of Kali-specific app icons, so folders
-would have rendered blue regardless of which of the two was
-configured. Pointing `IconThemeName` at the theme actually in effect
-is more honest than a name that implies a red accent it doesn't
-deliver. A separate `WhiteSur-icon-theme` build (macOS-style rounded
-"squircle" icons, genuinely red-capable) would be a reasonable
-follow-up for full visual consistency, but is a second project/build
-to verify, not bundled into this pass. The login screen
-(`lightdm-gtk-greeter.conf`) sets the matching `icon-theme-name` too,
-so it isn't the one surface still showing a different theme.
+**The panel layout** (`config/includes.chroot/usr/local/bin/argos-setup-panel-widgets`,
+run once at first login, same marker-file-gated pattern as before) now
+defines two panels from scratch via direct `xfconf-query` writes,
+replacing whatever `kali-desktop-xfce` ships by default:
 
-Exact color values are whatever WhiteSur's own built-in "red" preset
-renders — close in spirit to the brand red used in Plymouth/GRUB/wallpapers
-(`#cf1324`) but not a pixel-identical match, the same honest caveat as
-the previous theme pass. No dock: macOS's dock equivalent (Plank) isn't
-in Kali's repository at all (checked directly, not assumed — absent
-from every component), and building it from source would mean
-compiling an unfamiliar Vala application inside a build hook with no
-way to locally verify the result first, a meaningfully bigger risk than
-everything else in this section. Left out rather than shipped
-half-verified; worth a dedicated pass of its own if still wanted.
+- **Top**: a slim (26px) macOS-menu-bar-style bar — Whisker Menu on the
+  left, an expanding transparent separator, then a status-icon cluster
+  (`indicator`, `pulseaudio`, `power-manager-plugin`, `clock`) on the
+  right, mirroring the reference image's layout.
+- **Bottom**: `xfce4-docklike-plugin`, an expanding separator, then the
+  system-monitoring widgets this project already had before this pivot
+  (`cpugraph`, `systemload`, `netload`, `xfce4-sensors-plugin`) pushed
+  to the right edge, so the dock itself stays uncluttered.
+
+Two real bugs were found and fixed writing this, not just assumed
+away: the script's own `&`-backgrounding originally used `disown`
+(a bash builtin) in a `#!/bin/sh` script — on Debian/Kali, `/bin/sh` is
+`dash`, which doesn't have it, so the script would have failed outright
+with exit 127 partway through on the real system (confirmed directly by
+running it under `sh`, not bash, which is what actually catches this
+class of bug). And a running `xfce4-panel` does **not** pick up a
+newly-added second panel from these xfconf writes on its own (confirmed
+directly: wrote panel-2 live against an already-running panel,
+screenshotted before/after, identical) — it needs an actual restart,
+but `xfce4-panel --restart` hangs indefinitely in testing (a D-Bus RPC
+that never returns, the same class of CLI-hang already documented for
+`--add=` elsewhere in this project). Fixed by killing the process and
+launching a fresh one directly instead, which sidesteps that RPC and is
+confirmed directly to work.
+
+What this still can't show: whether everything actually looks this
+clean once genuinely booted, real window-manager interaction behavior,
+compositor-dependent effects (Plank-style translucency would need one;
+this setup's `solid` opacity deliberately doesn't), or the exact
+anti-aliasing/hinting a real Xorg session produces — same honest
+caveat as everywhere else in this section, and this sandbox's own
+Xvfb (software `llvmpipe`, no real compositor) couldn't settle the
+compositing question either way. That's what the next real build and
+boot confirms.
 
 ### Tool menu: 8 flat categories instead of Kali's 64-entry MITRE tree
 
@@ -977,9 +934,9 @@ design/engineering work, not a config override, and claiming otherwise
 would be dishonest:
 
 - The icon *set* itself — the actual shapes/artwork — is still
-  Flat-Remix's own design; only its accent color was switched (see
-  above). A genuinely custom icon set is a much larger design
-  undertaking than a theme build.
+  MacTahoe-icon-theme's own design (see above), just built with
+  ArgOS's accent color. A genuinely custom icon set is a much larger
+  design undertaking than a theme build.
 - **Package names themselves** (`kali-archive-keyring`, `kali-desktop-xfce`,
   `kali-linux-core`, `kali-tools-*`, etc.) still say "kali" — that's the
   direct tradeoff of bootstrapping from Kali's actual repository instead

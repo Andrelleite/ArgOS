@@ -3,44 +3,45 @@ set -e
 
 # ArgOS's own GTK3 + xfwm4 theme: window chrome, buttons, menus,
 # scrollbars, not just the wallpaper/icons/login-screen branding
-# elsewhere in this project. Per direct request for a macOS-like look
-# (rounded corners, traffic-light window buttons) while staying light
-# on resources, this is built from vinceliuice's WhiteSur-gtk-theme
-# (github.com/vinceliuice/WhiteSur-gtk-theme) -- an actively-maintained
-# project built specifically to clone macOS's look, confirmed (by
-# reading libs/lib-install.sh directly, not the README, which barely
-# mentions Xfce at all and focuses on GNOME) to genuinely build a real
-# xfwm4 theme with its own themerc and PNG window-button assets, not
-# just GTK widgets, and to specifically patch the Xfce Whisker Menu's
-# appearance (`fix_whiskermenu`) -- real Xfce support, not just ported
-# from a GNOME-only project.
+# elsewhere in this project.
 #
-# sassc (already added to desktop.list.chroot for the previous GTK
-# theme attempt) is this project's only real build dependency too.
+# Pivoted from WhiteSur-gtk-theme (dark, red accent) to
+# vinceliuice's MacTahoe-gtk-theme (github.com/vinceliuice/
+# MacTahoe-gtk-theme) per direct request for a genuinely light,
+# "macOS Tahoe" look -- confirmed by reading that project's own
+# README, not assumed: it's explicitly "Based on WhiteSur GTK Theme"
+# (same install mechanism, same libs/lib-install.sh architecture,
+# same real xfwm4 themerc + PNG window-button assets per color
+# variant), but its own default accent is described as "Tahoe-like"
+# where WhiteSur's is "BigSur-like" -- a deliberate clone of the
+# newer macOS look, not a reskin of the older one.
 #
-# -t red -c dark: ArgOS's own accent on a dark base, matching the rest
-# of this project's palette, not the project's default macOS blue.
-# -m (Monterey style) and --round (rounded corners survive maximizing,
-# not just floating windows) are the two flags that actually produce
-# the "round edges" look; --darker pushes the base closer to the
-# near-black ArgOS already uses in Plymouth/GRUB/wallpapers. Only this
-# one color/shade combination is built (the project ships many more by
-# default), keeping build time and image size down.
+# -c Light: the light color variant (COLOR_VARIANTS in
+# libs/lib-core.sh), not the project's dark default.
+# -o solid: the "solid" opacity variant turns off the theme's
+# transparency (`$trans` sed flag in gtk_base(), confirmed by
+# reading libs/lib-install.sh) -- the "solid" look asked for,
+# and also avoids depending on real desktop compositing being
+# active for the GTK3 widgets themselves to read correctly.
+# --round: maximized windows keep rounded corners instead of
+# squaring off (`$max_window_style` in customize_theme()).
+# -t default: the project's own default accent (blue), matching
+# its "Tahoe-like" default and the accent used throughout the
+# reference look this was built against.
 #
-# This project's folder-naming logic is more involved than the
-# previous GTK theme's (name+color+opacity+alt+theme+scheme all
-# concatenated, confirmed by reading libs/lib-install.sh's
-# install_theemy()) -- rather than hardcode a guessed-at final folder
-# name here and risk it silently drifting from whatever a future `git
-# clone` of this actively-developed project actually produces, the
-# built theme is found by what it actually contains (a real xfwm4
-# subdirectory) and pointed at with a stable symlink. xsettings.xml and
-# xfwm4.xml reference that stable "ArgOS" name, not the project's own
-# internal naming scheme.
+# This project's folder-naming logic concatenates
+# name+color+opacity+alt+theme+scheme (confirmed by reading
+# libs/lib-install.sh's install_theemy()) -- rather than hardcode a
+# guessed-at final folder name here and risk it silently drifting
+# from whatever a future `git clone` of this actively-developed
+# project actually produces, the built theme is found by what it
+# actually contains (a real xfwm4 subdirectory) and pointed at with
+# a stable symlink. xsettings.xml and xfwm4.xml reference that
+# stable "ArgOS" name, not the project's own internal naming scheme.
 
-git clone --depth=1 https://github.com/vinceliuice/WhiteSur-gtk-theme /usr/src/argos-gtk-theme-build
+git clone --depth=1 https://github.com/vinceliuice/MacTahoe-gtk-theme /usr/src/argos-gtk-theme-build
 cd /usr/src/argos-gtk-theme-build
-bash install.sh -d /usr/share/themes -n ArgOS -t red -c dark -m --round --darker
+bash install.sh -d /usr/share/themes -n ArgOS -c light -o solid -t default --round
 
 cd /usr/share/themes
 # Excludes the -hdpi/-xhdpi sibling folders the installer also builds
@@ -68,12 +69,22 @@ rm -rf /usr/src/argos-gtk-theme-build
 # file every GTK3 app reads directly at startup, no daemon or
 # propagation involved, so it's written here too as a belt-and-
 # suspenders mechanism that can't be affected by session-startup
-# timing at all.
+# timing at all. Confirmed directly (sandbox test, settings.ini only,
+# no env override): this is what actually fixed a real, previously
+# unresolved anomaly where zenity dialogs didn't pick up the prior
+# WhiteSur-based theme at all even with a correct settings.ini -- with
+# MacTahoe's build, the same mechanism works.
+#
+# gtk-application-prefer-dark-theme is now false: this is the light
+# variant, and leaving it true would make any GTK3 app that checks
+# this key look for the theme's separate dark CSS instead of the one
+# actually built here.
 install -d -m 0755 /etc/skel/.config/gtk-3.0
 cat > /etc/skel/.config/gtk-3.0/settings.ini <<'EOF'
 [Settings]
 gtk-theme-name=ArgOS
-gtk-application-prefer-dark-theme=true
+gtk-icon-theme-name=ArgOS
+gtk-application-prefer-dark-theme=false
 EOF
 
 # /home/argos and /root already exist by this point in the build, so

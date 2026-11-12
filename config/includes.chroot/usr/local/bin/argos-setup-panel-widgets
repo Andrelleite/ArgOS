@@ -1,34 +1,40 @@
 #!/bin/sh
 set -eu
 #
-# Adds always-visible CPU/RAM/network/temperature widgets to the Xfce
-# panel, using xfce4-panel's own `--add=<plugin>` mechanism rather than
-# a hand-authored xfconf XML -- the exact panel/plugin-ID schema is
-# fragile and version-dependent, and this uses the panel's own real
-# provisioning path instead of guessing it.
+# Defines ArgOS's own two-panel layout (replacing whatever
+# kali-desktop-xfce ships by default) to match the macOS-style look
+# built in 0185/0186: a slim top bar (menu, status-icon cluster,
+# clock -- like a macOS menu bar) and a bottom panel hosting a real
+# dock-style taskbar plus the system-monitoring widgets this project
+# already had before that pivot.
 #
-# Plugin internal names (cpugraph, netload, systemload,
-# xfce4-sensors-plugin) are taken directly from each package's shipped
-# /usr/share/xfce4/panel/plugins/*.desktop filename, not assumed.
+# Direct xfconf-query property writes, not `xfce4-panel --add=` --
+# confirmed directly (this project's own earlier testing) that
+# `--add=` can hang needing a running panel/window-manager session in
+# a way that's hard to make reliable at first-login time, where a
+# fixed set of property writes is deterministic and doesn't depend on
+# the panel's own current state. (The exact plugin-ID schema this
+# writes IS version-dependent, same caveat the old `--add=`-based
+# version of this script warned about -- but it's pinned to the
+# xfce4-panel version kali-desktop-xfce actually ships, same as any
+# other hardcoded assumption in this project, and is the only way to
+# get a deterministic two-panel layout rather than editing whatever
+# default panel-1 already happens to contain.)
 #
-# Guarded by a marker file: this only runs once ever (per user), since
-# re-running `--add=` on every login would pile up duplicate plugin
-# instances on the panel instead of just being a harmless no-op.
+# Guarded by a marker file: this only runs once ever (per user). This
+# redefines panels/plugins wholesale rather than adding to an
+# existing layout, so re-running it every login would silently
+# stomp any manual customization the user made after first boot.
 #
 # Run via /etc/xdg/autostart/ at Xfce session start, same as
 # argos-set-wallpaper.
 #
-# The original wait loop here had the exact same bug later found and
-# fixed in argos-set-wallpaper: `xfconf-query -c xfce4-panel -p
-# /panels -l` returns exit 0 even for a channel that's never been
-# touched at all (confirmed directly, not assumed), so it broke out on
-# its first attempt regardless of whether xfce4-panel had actually
-# created a panel yet. Fixed the same way: wait for a real
-# /panels/panel-N property to exist, not just for the channel to
-# respond. Also waits for xfwm4 to actually be running --
-# `xfce4-panel --add=` genuinely needs a window manager present
-# (confirmed directly: without one, it fails an internal assertion and
-# silently does nothing), and nothing else here was checking for that.
+# Waits for xfwm4 to be running and for the xfce4-panel channel to
+# have a real /panels/panel-N property (not just respond) before
+# writing -- the exact same two conditions, and the exact same
+# xfconf-query quirk (a channel that's never been touched still
+# returns exit 0 for `-p /panels -l`), already found and fixed here
+# previously.
 
 MARKER="${HOME}/.config/argos/.panel-widgets-configured"
 
@@ -46,9 +52,72 @@ for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
     sleep 1
 done
 
-for plugin in cpugraph systemload netload xfce4-sensors-plugin; do
-    xfce4-panel --add="$plugin" 2>/dev/null || true
-done
+xq() {
+    xfconf-query -c xfce4-panel "$@"
+}
+
+# --- Panel 1: top bar, macOS-menu-bar style ---------------------------
+
+xq -p /panels --create -t int -s 1 -t int -s 2 --force-array
+
+xq -p /panels/panel-1/position --create -t string -s "p=6;x=0;y=0"
+xq -p /panels/panel-1/length --create -t int -s 100
+xq -p /panels/panel-1/length-adjust --create -t bool -s false
+xq -p /panels/panel-1/size --create -t int -s 26
+xq -p /panels/panel-1/position-locked --create -t bool -s true
+xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 2 -t int -s 3 \
+    -t int -s 4 -t int -s 5 -t int -s 6 --force-array
+
+xq -p /plugins/plugin-1 --create -t string -s "whiskermenu"
+xq -p /plugins/plugin-2 --create -t string -s "separator"
+xq -p /plugins/plugin-2/expand --create -t bool -s true
+xq -p /plugins/plugin-2/style --create -t int -s 0
+xq -p /plugins/plugin-3 --create -t string -s "indicator"
+xq -p /plugins/plugin-4 --create -t string -s "pulseaudio"
+xq -p /plugins/plugin-5 --create -t string -s "power-manager-plugin"
+xq -p /plugins/plugin-6 --create -t string -s "clock"
+
+# --- Panel 2: bottom dock + the system-monitoring widgets this ---------
+# --- project already had before the macOS-style pivot ------------------
+
+# p=10 confirmed directly (sandbox test) to render at the bottom
+# edge, the same way p=6 (used for panel-1 above) was confirmed to
+# render at the top -- not assumed from the property name alone.
+xq -p /panels/panel-2/position --create -t string -s "p=10;x=0;y=0"
+xq -p /panels/panel-2/length --create -t int -s 100
+xq -p /panels/panel-2/length-adjust --create -t bool -s false
+xq -p /panels/panel-2/size --create -t int -s 42
+xq -p /panels/panel-2/position-locked --create -t bool -s true
+xq -p /panels/panel-2/plugin-ids --create -t int -s 10 -t int -s 11 -t int -s 12 \
+    -t int -s 13 -t int -s 14 -t int -s 15 --force-array
+
+xq -p /plugins/plugin-10 --create -t string -s "docklike"
+xq -p /plugins/plugin-11 --create -t string -s "separator"
+xq -p /plugins/plugin-11/expand --create -t bool -s true
+xq -p /plugins/plugin-11/style --create -t int -s 0
+xq -p /plugins/plugin-12 --create -t string -s "cpugraph"
+xq -p /plugins/plugin-13 --create -t string -s "systemload"
+xq -p /plugins/plugin-14 --create -t string -s "netload"
+xq -p /plugins/plugin-15 --create -t string -s "xfce4-sensors-plugin"
+
+# A running xfce4-panel does NOT pick up a newly-added panel-2 (or
+# its plugins) from these xfconf writes on its own -- confirmed
+# directly (sandbox test: wrote panel-2 live against an already-
+# running panel, took a screenshot before and after, identical,
+# panel-2 never appeared). It needs an actual restart.
+#
+# Not using `xfce4-panel --restart` (or `-r`) for that: confirmed
+# directly (sandbox test) that it hangs indefinitely -- it's a D-Bus
+# RPC asking the running instance to restart itself, and that call
+# never returns in testing, the same class of CLI-hang already
+# documented for `--add=` elsewhere in this project. Killing the
+# process and launching a fresh one directly sidesteps that RPC
+# entirely and is confirmed directly (same sandbox test) to work:
+# the fresh instance reads the now-complete xfconf config and shows
+# both panels immediately.
+pkill -x xfce4-panel 2>/dev/null || true
+sleep 1
+xfce4-panel >/dev/null 2>&1 &
 
 mkdir -p "$(dirname "$MARKER")"
 touch "$MARKER"
