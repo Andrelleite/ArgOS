@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+# desktop-base (added to desktop.list.chroot) fixes xfdesktop crashing
+# on a fresh session for lack of a fallback image to bootstrap from --
+# but its own postinst registers its own bundled Debian-themed SVGs
+# (ceratopsian/emerald/homeworld/etc.) as the `desktop-background`
+# update-alternatives target, confirmed by reading that postinst
+# directly. Left alone, that's a real regression of its own: a brief
+# flash of Debian's own wallpaper on every fresh boot, before
+# argos-set-wallpaper's xfconf-based override catches up a few seconds
+# later.
+#
+# Registering ArgOS's own wallpaper as the same alternative, at a
+# priority higher than anything desktop-base ships (its own entries
+# top out at 70, confirmed by reading the exact priorities in its
+# postinst), means xfdesktop's fallback resolves straight to ArgOS's
+# wallpaper from the very first frame -- no flash of someone else's
+# branding, and no change needed to argos-set-wallpaper itself.
+
+update-alternatives --install \
+    /usr/share/images/desktop-base/desktop-background \
+    desktop-background \
+    /usr/share/backgrounds/argos/argos-background.png \
+    999
+update-alternatives --set desktop-background \
+    /usr/share/backgrounds/argos/argos-background.png

@@ -85,6 +85,25 @@ x11-xserver-utils
 # listing it as a requirement.
 sassc
 
+# desktop-base -- this is the real fix for the "desktop is just a
+# plain black canvas" bug the argos-set-wallpaper race-condition fix
+# didn't fully solve. Confirmed directly from a real boot: xfdesktop
+# has ZERO xfconf backdrop/last-image properties on a fresh session
+# because it CRASHES on startup, and the crash message
+# ("Failed to load image file '(null)': Error opening file
+# /usr/share/images/desktop-base/default: No such file or directory")
+# points straight at this -- xfdesktop needs *some* fallback image to
+# bootstrap from before it creates its own real backdrop properties,
+# and that fallback path is shipped by desktop-base specifically, which
+# nothing in our package set pulls in (confirmed: neither xfdesktop4
+# nor kali-desktop-xfce Depends or even Recommends it -- another
+# --apt-recommends false casualty, the same bug class as the missing
+# xserver-xorg). Without it, xfdesktop never successfully initializes,
+# so argos-set-wallpaper's wait-for-last-image loop never finds
+# anything to overwrite -- not a bug in that script, a missing
+# dependency it was never able to work around.
+desktop-base
+
 # fonts-nerd-symbols -- without this, Powerlevel10k's "rainbow" preset
 # renders as missing-glyph boxes instead of its signature look. That
 # preset sets POWERLEVEL9K_MODE=nerdfont-complete (confirmed by reading

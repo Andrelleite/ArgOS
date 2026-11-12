@@ -530,6 +530,36 @@ real packages' files, not assumed):
   worst-case ordering (the script racing ahead of xfdesktop) and
   confirmed `last-image`/`image-style` land correctly under
   xfdesktop's own real property names afterward.
+  **Second update, from a real boot after that fix**: the desktop was
+  *still* a plain black canvas, and this time it wasn't the script at
+  all — `xfconf-query -c xfce4-desktop -l | grep last-image` returned
+  nothing, meaning xfdesktop had zero backdrop properties, meaning it
+  never successfully initialized in the first place. Running it
+  directly (`killall xfdesktop; xfdesktop`) showed the real reason:
+  `Failed to load image file '(null)': Error opening file
+  /usr/share/images/desktop-base/default: No such file or directory`.
+  xfdesktop needs *some* fallback image to bootstrap from before it
+  creates its own real properties, and that fallback path is shipped by
+  `desktop-base` — a package neither `xfdesktop4` nor
+  `kali-desktop-xfce` Depends *or even Recommends* on (confirmed by
+  reading both packages' actual dependency fields), so nothing pulled
+  it in. Without it, xfdesktop crashed on every single boot before
+  `argos-set-wallpaper` ever got a chance to run against it — not a bug
+  in that script, a missing dependency no amount of script-level fixing
+  could have worked around.
+  Fixed by adding `desktop-base` to `desktop.list.chroot` — but
+  `desktop-base`'s own postinst (read directly, not assumed) registers
+  its *own* bundled Debian-themed wallpapers as that same fallback
+  path via `update-alternatives`, which would have been a regression of
+  its own: a flash of Debian's own branding on every boot before
+  `argos-set-wallpaper` catches up a few seconds later.
+  `config/hooks/normal/0176-fix-xfdesktop-fallback-image.hook.chroot`
+  registers ArgOS's own wallpaper as the same alternative at a priority
+  higher than anything `desktop-base` ships (its own entries top out at
+  70, confirmed from the exact priorities in its postinst; ours is
+  999), so xfdesktop's fallback resolves to ArgOS's wallpaper from the
+  very first frame — no flash of someone else's branding, and no change
+  needed to `argos-set-wallpaper` itself.
 - **A wallpaper gallery, not just one image** —
   `/usr/share/backgrounds/argos/` ships five additional stylized
   variants alongside the plain logo-on-background default (all 1920x1080,
