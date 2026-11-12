@@ -5,45 +5,44 @@ set -e
 # xfconf, rather than shipping a static xfce4-desktop.xml with a
 # hardcoded monitor name (e.g. "monitorVGA-1", "monitoreDP-1") that
 # would only be correct on whatever hardware/VM it was written for.
-# Runs once per session via /etc/xdg/autostart/ -- idempotent, so
-# re-running on every login is harmless.
+# Runs once per session via /etc/xdg/autostart/.
 #
-# Earlier version had a real bug, caught from an actual boot showing a
-# plain black desktop instead of the wallpaper. Confirmed directly with
-# a throwaway Xvfb+xfconfd+xfwm4+xfdesktop session:
+# History of real bugs this went through, each caught from an actual
+# boot, not guessed:
 #
-#   1. `xfconf-query -c xfce4-desktop -l` returns exit 0 even when the
-#      channel has zero properties -- so the old "wait for xfconfd"
-#      retry loop broke out on its very first attempt regardless of
-#      whether xfdesktop had actually created its own backdrop
-#      properties yet, almost always racing ahead of it.
-#   2. That meant the old fallback branch usually ran instead, which
-#      wrote last-image under a hardcoded "/backdrop/screen0/monitor0/
-#      workspace0" path. That path doesn't match the real monitor name
-#      xfdesktop actually uses -- confirmed directly too: the test
-#      session's real monitor came up named "monitorscreen", not
-#      "monitor0". So the fallback wrote to a property xfdesktop never
-#      reads, and whatever xfdesktop's own freshly-created default
-#      happened to be (a plain color, in the user's case) is what
-#      actually showed.
-#
-# Fixed by waiting for a real last-image property to exist (not just
-# for the channel to respond) before doing anything, and dropping the
-# hardcoded-monitor-name fallback entirely -- there's no safe guess to
-# fall back to, so if xfdesktop genuinely never initializes in time,
-# doing nothing is strictly better than writing to a path that doesn't
-# exist. image-style is now set explicitly alongside last-image
-# (confirmed real value from the same test: 5, "zoomed" -- what
-# xfdesktop itself defaults freshly-created properties to) as a
-# defensive measure, in case whatever's pre-seeded in the actual image
-# ever has it at 0 (solid color, no image) for any reason.
-#
-# Re-tested end to end after this fix: same throwaway session, this
-# script actually produces a populated last-image + image-style=5 for
-# every monitor/workspace xfdesktop reports, under xfdesktop's own real
-# property names, not a guess.
+#   1. The original "wait for xfconfd" retry loop broke out on its
+#      first attempt regardless of whether xfdesktop had created real
+#      backdrop properties yet, because `xfconf-query -l` returns exit
+#      0 even for an empty channel (confirmed directly). Fixed by
+#      waiting for a real last-image property to exist instead.
+#   2. Even after that fix, a real boot still showed Kali's own
+#      wallpaper, not ours, and not filling the screen -- despite this
+#      script's logic finding and overwriting last-image correctly in
+#      every throwaway test session built to check it. The real Kali
+#      xfdesktop4 build isn't available to test directly in this
+#      project's sandbox (only Ubuntu's, which doesn't even reach the
+#      same code path -- confirmed by comparing against the real crash
+#      log from an actual boot, which names a path this sandbox's
+#      xfdesktop never tries at all), so there's a real, specific gap
+#      between what's verifiable here and Kali's actual binary
+#      behavior. Rather than keep guessing at an internal fallback
+#      sequence this project can't fully observe, this script now
+#      enforces the wallpaper repeatedly for a couple of minutes after
+#      login instead of once -- whatever else is setting it back
+#      (xfdesktop's own delayed monitor re-detection, a Kali-specific
+#      session script, or something else not yet identified) gets
+#      overridden again within a few seconds, every time, rather than
+#      only getting one chance to win the race.
 
 WALLPAPER=/usr/share/backgrounds/argos/argos-background.png
+
+apply_wallpaper() {
+    xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E '/last-image$' | while read -r prop; do
+        xfconf-query -c xfce4-desktop -p "$prop" -s "$WALLPAPER" 2>/dev/null || true
+        style_prop="${prop%/last-image}/image-style"
+        xfconf-query -c xfce4-desktop -p "$style_prop" -s 5 2>/dev/null || true
+    done
+}
 
 FOUND=0
 for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
@@ -56,8 +55,12 @@ done
 
 [ "$FOUND" -eq 1 ] || exit 0
 
-xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E '/last-image$' | while read -r prop; do
-    xfconf-query -c xfce4-desktop -p "$prop" -s "$WALLPAPER"
-    style_prop="${prop%/last-image}/image-style"
-    xfconf-query -c xfce4-desktop -p "$style_prop" -s 5 2>/dev/null || true
+apply_wallpaper
+
+# Keep re-asserting for a couple of minutes -- see history above for
+# why a single set-and-exit wasn't enough on a real boot. Cheap
+# (xfconf-query calls are near-instant) and self-limiting.
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24; do
+    sleep 5
+    apply_wallpaper
 done

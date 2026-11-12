@@ -665,6 +665,30 @@ real packages' files, not assumed):
   999), so xfdesktop's fallback resolves to ArgOS's wallpaper from the
   very first frame — no flash of someone else's branding, and no change
   needed to `argos-set-wallpaper` itself.
+  **Third update, from a real boot after *that* fix**: still Kali's
+  wallpaper, not filling the screen. This one exposed a real limit of
+  this project's own verification setup, not just another missed
+  dependency: the real Kali `xfdesktop4` isn't something this sandbox
+  can run directly (only Ubuntu's build is available here), and
+  testing against Ubuntu's build doesn't reach the same code path at
+  all — it picks its own stock `xfce-shapes.svg` wallpaper directly,
+  never even trying `/usr/share/images/desktop-base/default`, which
+  contradicts the real crash log from the actual boot that named that
+  exact path. That gap means this project can verify the *mechanism*
+  (the fallback alternative correctly resolves to ArgOS's wallpaper,
+  confirmed directly) without being able to confirm Kali's specific
+  binary still picks it up correctly afterward and doesn't get
+  reset by something else shortly after login.
+  Rather than keep guessing at an internal sequence this setup can't
+  fully observe, `argos-set-wallpaper` now enforces the wallpaper
+  repeatedly for two minutes after login instead of setting it once
+  and exiting — cheap (each check is a near-instant `xfconf-query`
+  call) and self-limiting. Tested directly against a real
+  Xvfb+xfconfd+xfwm4+xfdesktop session by simulating exactly this
+  failure mode — forcing `last-image` back to a different value a few
+  seconds after this script's first pass — and confirming the script's
+  next cycle catches and corrects it within five seconds, regardless of
+  what caused the reset.
 - **A wallpaper gallery, not just one image** —
   `/usr/share/backgrounds/argos/` ships five additional stylized
   variants alongside the plain logo-on-background default (all 1920x1080,
