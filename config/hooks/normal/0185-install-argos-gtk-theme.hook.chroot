@@ -120,30 +120,41 @@ EOF
 # confirmed directly, both panels configured together in the same
 # test, not reasoned through and assumed.
 #
-# rgba(245, 245, 245, 0.55) is real, non-blurred translucency, not
-# the full frosted/blurred "glass" look real macOS has -- that's not
+# rgba(28, 28, 30, 0.65) is real, non-blurred translucency, not the
+# full frosted/blurred "glass" look real macOS has -- that's not
 # achievable at all here (GTK3 has no backdrop-filter/blur support,
 # and xfwm4's compositor has no blur shader, confirmed directly, not
-# a configuration gap). This is the closest real approximation:
-# panel content genuinely blends with whatever's behind it. 0.55
-# chosen by checking actual text legibility over it, not picked
-# blind -- confirmed readable in a live screenshot.
+# a configuration gap). This is the closest real approximation: panel
+# content genuinely blends with whatever's behind it -- confirmed in a
+# live screenshot that over this project's own vibrant ArgOS wallpaper,
+# the translucent dark panel actually picks up a tinted gradient from
+# the image behind it, not just a flat dark bar.
+#
+# Dark, not the light rgba(245, 245, 245, 0.55) this shipped with
+# before: a direct side-by-side with a real macOS screenshot sent as a
+# reference showed that bar is dark/translucent, not light, and
+# pointedly rejected the light version as "nothing like" it. The
+# matching `color: #f2f2f2` rule below is not cosmetic -- without it
+# the clock and button labels are dark-on-dark and unreadable;
+# confirmed directly (a screenshot with this missing showed the clock
+# essentially invisible against the new dark background).
 #
 # The padding rules below are a direct response to the bar looking
 # "hammered" (cramped, items touching) per direct feedback -- plain
 # `.xfce4-panel button` icons (whiskermenu, the status-icon cluster)
 # had zero breathing room by default. Confirmed directly in a live
 # screenshot that this padding alone visibly opens up the icon
-# cluster. It does NOT reach inside cpugraph/systemload/netload's own
-# internal rendering (they're not `.xfce4-panel button`s, and no
-# "hide label" property was found for them after checking their real
-# binaries directly) -- a real spacer plugin between them
-# (argos-setup-panel-widgets) handles that gap instead.
+# cluster.
 install -d -m 0755 /etc/skel/.config/gtk-3.0
 cat > /etc/skel/.config/gtk-3.0/gtk.css <<'EOF'
 .xfce4-panel.background#XfcePanelWindow {
     border-radius: 16px;
-    background-color: rgba(245, 245, 245, 0.55);
+    background-color: rgba(28, 28, 30, 0.65);
+}
+.xfce4-panel,
+.xfce4-panel button,
+.xfce4-panel label {
+    color: #f2f2f2;
 }
 .xfce4-panel button,
 .xfce4-panel .xfce4-panel-widget {

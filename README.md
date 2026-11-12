@@ -1074,6 +1074,70 @@ everything else is configured.
 so whiskermenu was using its own built-in default) — fully opaque,
 so this doesn't depend on compositing working at all.
 
+**The top bar went dark, and sparser, after a direct side-by-side with
+a real macOS screenshot.** The light `rgba(245, 245, 245, 0.55)` panel
+above was built against a written description of the look, not an
+actual reference image; once a real macOS desktop screenshot was sent
+directly for comparison, it was pointedly rejected as "nothing like"
+it — that reference shows a dark/translucent bar, not light. The panel
+background is now `rgba(28, 28, 30, 0.65)` with an explicit
+`color: #f2f2f2` rule for panel text/button labels (without it the
+clock is dark-on-dark and unreadable — confirmed directly, a
+screenshot taken before adding this rule showed the clock essentially
+invisible). This is independent of the window theme's own `-c Light`
+build above (dialogs, window chrome, menus stay the light MacTahoe
+variant) — only the panel's own CSS override is dark, the same way a
+real macOS menu bar's translucency can read dark over a bright
+wallpaper independent of the system being in "light mode."
+
+The status-icon cluster also shrank, for two different reasons:
+
+- `cpugraph`/`systemload`/`netload` (the metrics cluster) came off the
+  bar entirely, to match the reference image's sparse look. This is a
+  **direct reversal** of an earlier, explicit request to move metrics
+  onto this same bar — flagged here, not assumed settled. The packages
+  stay installed (`desktop.list.chroot`) and the plugins are addable
+  again via Panel Preferences, or back into
+  `argos-setup-panel-widgets`, if the sparser look turns out to be the
+  wrong tradeoff.
+- `pulseaudio` and `power-manager-plugin` came off for a harder reason:
+  confirmed directly, across many isolated sandbox tests (not guessed,
+  not assumed from a single screenshot), that the `pulseaudio-plugin`
+  widget renders as a solid opaque white block whenever the `clock`
+  plugin is also present on the same panel — any order, with or
+  without a separator between them — and that `power-manager-plugin`
+  shows the same solid-white-block failure on its own, regardless of
+  `pulseaudio`. A catch-all `.xfce4-panel.background * { background-
+  color: transparent }` CSS rule was tried and did **not** fix it,
+  which rules out the GTK style cascade as the cause. Starting a real
+  PulseAudio-compatible server directly in the sandbox
+  (`pipewire`+`wireplumber`+`pipewire-pulse`, none of which run by
+  default in this minimal container) and retesting didn't fix it
+  either. It reproduces deterministically on a plain restart with this
+  exact plugin combination, not a one-off startup race — confirmed by
+  restarting `xfce4-panel` twice in a row with the same config. Root
+  cause not fully pinned down beyond these trigger conditions; this
+  sandbox also has no battery, backlight, or sound hardware at all,
+  unlike a real target VM, so whether this exact bug reproduces there
+  too is genuinely unverified, not assumed either way. Both plugins
+  stay installed and addable via Panel Preferences — same precedent as
+  `xfce4-sensors-plugin` above — rather than ship a bar with a visible
+  broken white rectangle on it.
+
+**The drag-handle bug.** A second, unrelated solid-white-block turned
+up at the panel's far edge even with a single plugin on it. Root
+cause: an *unlocked* xfce4-panel draws its own drag-handle grip widget
+at the panel's edge, and that widget is a raw GTK handle, not a
+themeable panel child — this project's CSS can't reach it, and it
+renders as a plain, unstyled, opaque white rectangle. Blended into the
+old light bar this was easy to miss entirely; against the new dark bar
+it was glaring, and was first mistaken for a plugin rendering bug
+before being isolated (reducing the panel down to a bare `whiskermenu`-
+only config, screenshotting, and testing `position-locked` directly) —
+confirmed fixed by setting `/panels/panel-1/position-locked` to `true`
+(already set for an unrelated reason — not re-draggable at runtime —
+but this is the property's real, load-bearing effect on the dark bar).
+
 ### Tool menu: 8 flat categories instead of Kali's 64-entry MITRE tree
 
 Per direct request that tool navigation be "way easier," not just

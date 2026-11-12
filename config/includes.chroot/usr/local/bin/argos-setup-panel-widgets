@@ -89,6 +89,16 @@ xq -p /panels/panel-1/position --create -t string -s "p=6;x=0;y=0"
 xq -p /panels/panel-1/length --create -t int -s 100
 xq -p /panels/panel-1/length-adjust --create -t bool -s false
 xq -p /panels/panel-1/size --create -t int -s 34
+# position-locked=true is load-bearing, not just "don't let the user
+# accidentally drag it": confirmed directly that an *unlocked* panel
+# draws its own drag-handle grip widget at the panel's edge, which
+# this project's own GTK theme doesn't (and, being a raw GTK handle
+# widget rather than a themeable panel child, largely can't) style --
+# it renders as a solid, opaque, unstyled white block. Blended into an
+# earlier light-colored bar this was easy to miss; against the new
+# dark/translucent bar it was glaring, and was first mistaken for a
+# plugin rendering bug before isolating it down to a bare whiskermenu-
+# only panel and testing this property directly.
 xq -p /panels/panel-1/position-locked --create -t bool -s true
 
 # Two expanding separators (plugin-2 and plugin-8), one on each side
@@ -106,9 +116,46 @@ xq -p /panels/panel-1/position-locked --create -t bool -s true
 # re-measuring, not assumed to have helped) -- not exact, but close,
 # and it keeps the bar as one real piece instead of three floating
 # panels with visible gaps, which matters more per direct feedback.
-xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 -t int -s 3 \
-    -t int -s 4 -t int -s 5 -t int -s 2 -t int -s 6 -t int -s 8 -t int -s 12 \
-    -t int -s 20 -t int -s 13 -t int -s 14 --force-array
+#
+# Deliberately sparse now -- whiskermenu, tool-finder, clock, network
+# indicator, nothing else -- a direct rebuild against a real macOS
+# screenshot sent as a reference (dark/translucent bar, Apple logo +
+# menu text left, a handful of status icons + clock right, no visible
+# clutter). This drops the cpugraph/systemload/netload metrics cluster
+# that an earlier round of feedback asked to have moved onto this same
+# bar: a real reversal of that earlier, explicit request, not a silent
+# one -- flagged here and in the commit message, not assumed settled.
+# The metrics packages are still installed (desktop.list.chroot) and
+# can be re-added via Panel Preferences, or re-added here, if the
+# sparser look turns out to be the wrong tradeoff.
+#
+# pulseaudio and power-manager-plugin also dropped from the default
+# panel, for a different, harder reason: confirmed directly, across
+# many isolated sandbox tests (not guessed, not assumed from one
+# screenshot) that the pulseaudio-plugin widget renders as a solid
+# opaque white block -- not a theme/CSS issue (a catch-all `* {
+# background-color: transparent }` rule was tried and did not fix
+# it, ruling out the GTK style cascade as the cause) -- specifically
+# and only when the clock plugin is also present on the panel, in any
+# order, with or without a separator between them; power-manager-
+# plugin showed the same solid-white-block failure on its own,
+# independent of pulseaudio or clock. Neither a live xfconf-query
+# update to an already-running panel nor a real kill+relaunch
+# sequenced after the rest of the panel had settled made a difference
+# -- it reproduces deterministically on a plain restart with this
+# exact plugin combination, not a one-off startup race. Root cause
+# not fully pinned down (tried and ruled out: GTK CSS specificity,
+# a live PulseAudio-compatible server being absent -- started
+# pipewire+wireplumber+pipewire-pulse directly in the sandbox and
+# retested, block still appeared); this sandbox also has no battery,
+# backlight, or sound hardware at all, which a real VM target
+# normally does have, so whether this exact bug reproduces there too
+# is genuinely unverified, not assumed either way. Rather than ship a
+# bar with a visible broken white rectangle, both are left installed
+# (desktop.list.chroot) and addable via Panel Preferences, same
+# precedent as xfce4-sensors-plugin below.
+xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 -t int -s 2 \
+    -t int -s 6 -t int -s 8 -t int -s 3 --force-array
 
 xq -p /plugins/plugin-1 --create -t string -s "whiskermenu"
 xq -p /plugins/plugin-7 --create -t string -s "launcher"
@@ -122,8 +169,6 @@ xq -p /plugins/plugin-7 --create -t string -s "launcher"
 # used for this exact property, is the order that actually works.
 xq -p /plugins/plugin-7/items -t string -s "argos-toolfinder-gui.desktop" --create --force-array
 xq -p /plugins/plugin-3 --create -t string -s "indicator"
-xq -p /plugins/plugin-4 --create -t string -s "pulseaudio"
-xq -p /plugins/plugin-5 --create -t string -s "power-manager-plugin"
 xq -p /plugins/plugin-2 --create -t string -s "separator"
 xq -p /plugins/plugin-2/expand --create -t bool -s true
 xq -p /plugins/plugin-2/style --create -t int -s 0
@@ -147,31 +192,14 @@ xq -p /plugins/plugin-6/digital-time-format -t string -s "%a %d %b  %H:%M" --cre
 xq -p /plugins/plugin-8 --create -t string -s "separator"
 xq -p /plugins/plugin-8/expand --create -t bool -s true
 xq -p /plugins/plugin-8/style --create -t int -s 0
-xq -p /plugins/plugin-12 --create -t string -s "cpugraph"
-# plugin-20: a small, non-expanding separator between cpugraph and
-# systemload -- direct feedback called the metrics cluster "hammered"
-# (cramped, no breathing room). A separator here is confirmed safe;
-# the same idea tried between systemload and netload instead hit a
-# real, reproducible rendering bug (netload's own text split apart
-# and part of it relocated to the far right of the whole bar) --
-# confirmed directly in a live screenshot, not just suspected, so that
-# placement was dropped rather than shipped broken. No "hide label"
-# xfconf property was found for systemload/netload after checking
-# their real binaries directly (unlike cpugraph, which has one), so
-# this spacer is the real, working fix for the gap it covers.
-xq -p /plugins/plugin-20 --create -t string -s "separator"
-xq -p /plugins/plugin-20/style --create -t int -s 0
-xq -p /plugins/plugin-20/expand --create -t bool -s false
-xq -p /plugins/plugin-13 --create -t string -s "systemload"
-xq -p /plugins/plugin-14 --create -t string -s "netload"
-# xfce4-sensors-plugin dropped from the default panel (still
-# installed -- see desktop.list.chroot -- and addable later via
-# Panel Preferences): confirmed directly that it renders nothing
-# visible in this sandbox's container, but that's a real, named
-# limitation of the sandbox (no real hwmon/ACPI thermal sensors in a
-# container), not proof it's useless on real hardware or even a real
-# VM -- same honest distinction as the compositing/shadow questions
-# elsewhere in this project.
+# xfce4-sensors-plugin, cpugraph/systemload/netload, and the
+# xfpm/pulseaudio status icons are all still installed (see
+# desktop.list.chroot) and addable later via Panel Preferences, just
+# not on the default panel -- see the long comment above
+# plugin-ids for why (confirmed-broken rendering for two of them,
+# confirmed-invisible-in-this-sandbox for sensors, and a direct
+# reversal of an earlier request for the metrics cluster, each a
+# different, specific reason, not one blanket excuse).
 
 # --- Panel 2: bottom dock -- a real row of pinned app icons -------------
 
