@@ -173,27 +173,67 @@ xq -p /plugins/plugin-14 --create -t string -s "netload"
 # VM -- same honest distinction as the compositing/shadow questions
 # elsewhere in this project.
 
-# --- Panel 2: bottom dock, docklike only --------------------------------
+# --- Panel 2: bottom dock -- a real row of pinned app icons -------------
 
 # p=10 confirmed directly (sandbox test) to render at the bottom,
 # centered. Per direct request, this is a real dock, not a second
 # full-width bar: length-adjust=true + a small base length (10%, not
 # 100%) makes the panel shrink-wrap to whatever its plugins actually
-# need instead of stretching edge-to-edge. size=64 (taller than the
-# first attempt's 42, per direct feedback that it looked too small)
-# gives it real visual presence even before anything is pinned. The
-# rounded, translucent "glass" look this enables comes from a GTK CSS
-# rule in 0185-install-argos-gtk-theme's gtk-3.0/gtk.css, not an
-# xfconf property -- xfce4-panel has no corner-radius or transparency
+# need instead of stretching edge-to-edge. size=64 (taller than an
+# earlier attempt's 42, per direct feedback that it looked too small)
+# gives it real visual presence. The rounded, translucent "glass"
+# look this enables comes from a GTK CSS rule in
+# 0185-install-argos-gtk-theme's gtk-3.0/gtk.css, not an xfconf
+# property -- xfce4-panel has no corner-radius or transparency
 # property of its own.
+#
+# Ten separate `launcher` plugins, each with one real, verified
+# .desktop file -- not xfce4-docklike-plugin, which this project
+# shipped here before. Reverted per direct feedback (a screenshot of
+# a real macOS dock, full of app icons) that made the actual problem
+# obvious: docklike has never once been confirmed to render anything
+# in this project's own sandbox (checked directly -- its .so was
+# never even present, a dependency mismatch on this Ubuntu-based
+# sandbox), so every prior dock screenshot from this sandbox showed
+# an empty panel, which is indistinguishable in a screenshot from
+# "docklike with nothing pinned" but is not the same claim. A fixed
+# row of launchers is something this project can actually verify end
+# to end: each of these ten .desktop filenames was confirmed directly
+# by extracting the real package (not guessed) --
+# org.xfce.mousepad.desktop, org.xfce.Parole.desktop, and
+# org.pulseaudio.pavucontrol.desktop in particular don't match their
+# package names and would have been wrong guesses. All ten packages
+# are real Depends of kali-desktop-xfce (confirmed against the live
+# archive), so all ten are guaranteed installed.
 xq -p /panels/panel-2/position --create -t string -s "p=10;x=0;y=0"
 xq -p /panels/panel-2/length --create -t int -s 10
 xq -p /panels/panel-2/length-adjust --create -t bool -s true
 xq -p /panels/panel-2/size --create -t int -s 64
 xq -p /panels/panel-2/position-locked --create -t bool -s true
-xq -p /panels/panel-2/plugin-ids --create -t int -s 10 --force-array
+xq -p /panels/panel-2/plugin-ids --create -t int -s 30 -t int -s 31 \
+    -t int -s 32 -t int -s 33 -t int -s 34 -t int -s 35 -t int -s 36 \
+    -t int -s 37 -t int -s 38 -t int -s 39 --force-array
 
-xq -p /plugins/plugin-10 --create -t string -s "docklike"
+xq -p /plugins/plugin-30 --create -t string -s "launcher"
+xq -p /plugins/plugin-30/items -t string -s "thunar.desktop" --create --force-array
+xq -p /plugins/plugin-31 --create -t string -s "launcher"
+xq -p /plugins/plugin-31/items -t string -s "qterminal.desktop" --create --force-array
+xq -p /plugins/plugin-32 --create -t string -s "launcher"
+xq -p /plugins/plugin-32/items -t string -s "firefox-esr.desktop" --create --force-array
+xq -p /plugins/plugin-33 --create -t string -s "launcher"
+xq -p /plugins/plugin-33/items -t string -s "org.xfce.mousepad.desktop" --create --force-array
+xq -p /plugins/plugin-34 --create -t string -s "launcher"
+xq -p /plugins/plugin-34/items -t string -s "org.xfce.ristretto.desktop" --create --force-array
+xq -p /plugins/plugin-35 --create -t string -s "launcher"
+xq -p /plugins/plugin-35/items -t string -s "org.xfce.Parole.desktop" --create --force-array
+xq -p /plugins/plugin-36 --create -t string -s "launcher"
+xq -p /plugins/plugin-36/items -t string -s "atril.desktop" --create --force-array
+xq -p /plugins/plugin-37 --create -t string -s "launcher"
+xq -p /plugins/plugin-37/items -t string -s "org.pulseaudio.pavucontrol.desktop" --create --force-array
+xq -p /plugins/plugin-38 --create -t string -s "launcher"
+xq -p /plugins/plugin-38/items -t string -s "engrampa.desktop" --create --force-array
+xq -p /plugins/plugin-39 --create -t string -s "launcher"
+xq -p /plugins/plugin-39/items -t string -s "xfce4-taskmanager.desktop" --create --force-array
 
 # A running xfce4-panel does NOT pick up a newly-added panel-2 (or
 # its plugins) from these xfconf writes on its own -- confirmed

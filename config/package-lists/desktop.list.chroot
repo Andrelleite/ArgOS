@@ -152,18 +152,18 @@ tumbler
 # comment: the panel/plugin-ID schema is fragile and version-
 # dependent, so this uses the panel's own real provisioning path).
 #
-# xfce4-docklike-plugin -- a bottom-panel dock/taskbar (pinned +
-# running apps, grouped by icon). Xfce has no dock of its own, and
-# the obvious real dock apps (plank, cairo-dock) were tried first and
-# dropped: confirmed directly against the real kali-rolling archive
-# (scripts/argos-preflight.sh), neither one actually exists there --
-# this is the one real, packaged alternative that does. Won't have
-# Plank's own rounded/translucent cairo-rendered look, but is an
-# actually-shipped, actively-maintained Xfce panel plugin (part of
-# the xfce4-panel-plugins ecosystem, gitlab.xfce.org) with no build
-# risk, unlike building Plank's largely-unmaintained Vala/meson
-# project from source.
-xfce4-docklike-plugin
+# No dock package needed here: the bottom dock (argos-setup-panel-
+# widgets) is ten `launcher` plugins, one real .desktop file each
+# (thunar, qterminal, firefox-esr, and others), all of which are
+# already real Depends of kali-desktop-xfce/kali-desktop-core below --
+# nothing extra to install. (Plank and cairo-dock were tried first and
+# dropped: confirmed directly against the real kali-rolling archive,
+# neither actually exists there. xfce4-docklike-plugin was tried after
+# that and also dropped -- it was never once confirmed to render
+# anything in this project's own sandbox, a dependency mismatch meant
+# its .so was never even present to test, so every prior dock
+# screenshot from this sandbox showed an empty panel. A fixed row of
+# launchers is something this project can actually verify end to end.)
 
 # xfce4-pulseaudio-plugin, xfce4-power-manager-plugins,
 # xfce4-indicator-plugin -- the macOS-style top-bar status-icon

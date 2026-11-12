@@ -111,7 +111,7 @@ cat > /etc/lightdm/lightdm-gtk-greeter.conf <<'EOF'
 # (see xsettings.xml) so the login screen isn't the one surface still
 # showing an unrelated theme.
 [greeter]
-background=/usr/share/backgrounds/argos/argos-background.png
+background=/usr/share/backgrounds/argos/argos-wallpaper-splash-color.png
 user-background=false
 theme-name=ArgOS
 icon-theme-name=ArgOS
@@ -163,4 +163,76 @@ show-command-hibernate=false
 show-command-logout=true
 show-command-menueditor=false
 show-command-profile=false
+EOF
+
+# A fifth real casualty of the same kali-themes dependency chain,
+# found auditing it further per direct request for "no kali
+# references" -- not a postinst-overwrite this time, a genuine hard
+# package dependency: kali-themes-common (itself a hard Depends of
+# kali-themes, confirmed by reading the real archive's Depends: line
+# directly, not assumed) hard-Depends on kali-wallpapers-2026. That
+# package is what was actually showing Kali's own watermarked
+# wallpapers as options in Xfce's own "Desktop Settings" picker on a
+# real boot -- the active wallpaper was already correctly ArgOS's own
+# (argos-set-wallpaper), but the *picker itself* still listed Kali's,
+# a real, visible "still Kali" surface this project hadn't found yet.
+#
+# Root cause, confirmed by extracting the real .deb directly: Xfce's
+# (and GNOME's) wallpaper picker is driven by
+# /usr/share/gnome-background-properties/*.xml registration files,
+# not a raw directory scan -- kali-wallpapers-2026 ships
+# kali-backgrounds_2026.xml registering its own images by name.
+# ArgOS never shipped an equivalent file for its own wallpapers, so
+# removing Kali's images without adding this would just leave the
+# picker empty, not fixed.
+rm -rf /usr/share/backgrounds/kali /usr/share/backgrounds/kali-16x9
+rm -f /usr/share/gnome-background-properties/kali-backgrounds*.xml
+
+cat > /usr/share/gnome-background-properties/argos-backgrounds.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">
+<wallpapers>
+  <wallpaper>
+    <name>ArgOS</name>
+    <filename>/usr/share/backgrounds/argos/argos-background.png</filename>
+    <options>zoom</options>
+    <pcolor>#000000</pcolor>
+    <scolor>#000000</scolor>
+  </wallpaper>
+  <wallpaper>
+    <name>ArgOS Splash Color</name>
+    <filename>/usr/share/backgrounds/argos/argos-wallpaper-splash-color.png</filename>
+    <options>zoom</options>
+    <pcolor>#000000</pcolor>
+    <scolor>#000000</scolor>
+  </wallpaper>
+  <wallpaper>
+    <name>ArgOS HUD Light</name>
+    <filename>/usr/share/backgrounds/argos/argos-wallpaper-hud-light.png</filename>
+    <options>zoom</options>
+    <pcolor>#ffffff</pcolor>
+    <scolor>#ffffff</scolor>
+  </wallpaper>
+  <wallpaper>
+    <name>ArgOS HUD Red Team</name>
+    <filename>/usr/share/backgrounds/argos/argos-wallpaper-hud-redteam.png</filename>
+    <options>zoom</options>
+    <pcolor>#000000</pcolor>
+    <scolor>#000000</scolor>
+  </wallpaper>
+  <wallpaper>
+    <name>ArgOS Lineart Gradient</name>
+    <filename>/usr/share/backgrounds/argos/argos-wallpaper-lineart-gradient.png</filename>
+    <options>zoom</options>
+    <pcolor>#000000</pcolor>
+    <scolor>#000000</scolor>
+  </wallpaper>
+  <wallpaper>
+    <name>ArgOS Tactical Dark</name>
+    <filename>/usr/share/backgrounds/argos/argos-wallpaper-tactical-dark.png</filename>
+    <options>zoom</options>
+    <pcolor>#000000</pcolor>
+    <scolor>#000000</scolor>
+  </wallpaper>
+</wallpapers>
 EOF

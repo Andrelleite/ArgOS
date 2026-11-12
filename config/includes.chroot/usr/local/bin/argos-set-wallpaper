@@ -34,7 +34,15 @@ set -e
 #      overridden again within a few seconds, every time, rather than
 #      only getting one chance to win the race.
 
-WALLPAPER=/usr/share/backgrounds/argos/argos-background.png
+# Changed from the plain dark-logo background per the macOS reference
+# image this was compared directly against -- a flat dark logo on
+# black reads as a splash screen, not a desktop wallpaper; this is
+# ArgOS's own existing vibrant wallpaper asset (already shipped,
+# already real, just never the default), closer in spirit to an
+# actual desktop background. A deliberate change from an earlier,
+# explicit choice to keep the dark-logo background -- flagged, not
+# silently overridden.
+WALLPAPER=/usr/share/backgrounds/argos/argos-wallpaper-splash-color.png
 
 apply_wallpaper() {
     xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E '/last-image$' | while read -r prop; do

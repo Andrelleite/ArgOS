@@ -42,7 +42,7 @@ diagram is aspirational.
 │   Panel: one continuous top bar (menu+tool-finder+status left ·         │
 │     clock near-center · metrics right, rounded+translucent) + a         │
 │     centered, shrink-wrapped, rounded+translucent bottom dock           │
-│     (xfce4-docklike-plugin alone)                                        │
+│     (10 real app launchers: Thunar/qterminal/Firefox/etc.)               │
 │     (argos-setup-panel-widgets, configured once via direct               │
 │      xfconf-query writes)                                                │
 │   Desktop: ArgOS wallpaper (argos-set-wallpaper, any monitor layout) ·    │
@@ -714,15 +714,36 @@ real packages' files, not assumed):
   what caused the reset.
 - **A wallpaper gallery, not just one image** —
   `/usr/share/backgrounds/argos/` ships five additional stylized
-  variants alongside the plain logo-on-background default (all 1920x1080,
-  `assets/wallpapers/` has the source files): a colorful splash/graffiti
-  style, a dark tactical HUD look, a red-team HUD variant, a minimal
-  line-art gradient, and a clean light/"stealth" HUD style. Xfce's own
-  "Desktop Settings" wallpaper picker lists every image in the same
-  folder as whatever's currently set, so all six show up there without
-  any extra scripting — `argos-set-wallpaper` still only sets the plain
-  logo one as the actual first-boot default, the rest are there to pick
-  from.
+  variants alongside the plain logo-on-background original default (all
+  1920x1080): a colorful splash/graffiti style, a dark tactical HUD
+  look, a red-team HUD variant, a minimal line-art gradient, and a
+  clean light/"stealth" HUD style. The default (`argos-set-wallpaper`,
+  and the login screen background) is now the splash/graffiti one —
+  changed per direct comparison against a real macOS desktop
+  screenshot: a flat logo on black reads as a splash/loading screen,
+  not a desktop wallpaper. (A deliberate change from an earlier,
+  explicit decision to keep the plain logo background — flagged here,
+  not silently overridden.)
+
+  **A real "still Kali" surface found auditing this further, not from
+  a screenshot this time**: an earlier pass assumed Xfce's own "Desktop
+  Settings" wallpaper picker lists every image in the same folder as
+  whatever's currently set, so ArgOS's own six would "just show up."
+  That's not how it actually works, confirmed by reading the real
+  mechanism: the picker is driven by
+  `/usr/share/gnome-background-properties/*.xml` registration files,
+  not a raw directory scan. A real boot's screenshot of that picker
+  showed Kali's own watermarked wallpapers as the (only) listed
+  options — root cause, confirmed by reading the real package
+  dependency chain directly: `kali-themes-common` (itself a hard
+  `Depends` of `kali-themes`, which this project needs for its font/
+  dconf dependencies) hard-`Depends` on `kali-wallpapers-2026`, which
+  ships exactly that registration file for its own images. Fixed in
+  `0190-reassert-argos-branding-over-kali-themes.hook.chroot`: removes
+  Kali's wallpaper image files and its registration XML, and adds
+  `argos-backgrounds.xml` registering all six of ArgOS's own wallpapers
+  by name — so the picker now shows ArgOS's gallery instead of nothing,
+  not Kali's instead of ArgOS's.
 
 **Two branding leaks found from an actual booted image, not guessed**:
 the panel's start-menu button was still Kali's own dragon icon, and an
@@ -845,23 +866,43 @@ config. With MacTahoe's build, the same mechanism (confirmed directly:
 `settings.ini` alone, no `GTK_THEME` env override) works — screenshotted
 above.
 
-**The dock.** The previous pass left this out: Plank (macOS's dock
-equivalent) isn't in Kali's repository at all (confirmed directly, not
-assumed). Checked again for this pass, along with the obvious
-alternative — cairo-dock is *also* absent from kali-rolling (confirmed
-directly against the real mirror via `scripts/argos-preflight.sh`, not
-assumed from this project's Ubuntu-based test sandbox, which has its
-own, different package set and would have given a false answer).
-Building Plank from source was considered and rejected: its upstream is
-largely unmaintained (part of why Debian/Kali dropped it), and it's a
-Vala/meson project with no way to locally verify the build result
-first, a meaningfully bigger risk than anything else in this section.
-Used [xfce4-docklike-plugin](https://gitlab.xfce.org/panel-plugins/xfce4-docklike-plugin)
-instead — a real, packaged, actively-maintained Xfce panel plugin
-(confirmed resolving against kali-rolling) that groups pinned and
-running apps by icon, taskbar-style. It won't have Plank's own
-rounded/translucent cairo-rendered look, but it's a real dock with no
-build risk, on a dedicated bottom panel.
+**The dock.** Plank (macOS's dock equivalent) isn't in Kali's
+repository at all (confirmed directly, not assumed), and neither is
+cairo-dock (confirmed directly against the real mirror, not assumed
+from this project's Ubuntu-based test sandbox, which has its own,
+different package set and would have given a false answer). Building
+Plank from source was considered and rejected: its upstream is largely
+unmaintained, and it's a Vala/meson project with no way to locally
+verify the build result first.
+
+`xfce4-docklike-plugin` was tried next and also dropped, for a more
+fundamental reason found later: it never once rendered anything in
+this project's own sandbox (confirmed by checking for its `.so` file
+directly and finding none — an `apt install` of its `.deb` had failed
+on a library version mismatch specific to this Ubuntu-based sandbox,
+silently, with no further investigation at the time). Every dock
+screenshot from that period showed an empty panel because no plugin
+had loaded at all — not "docklike with nothing pinned," which looks
+identical in a screenshot but is a different claim, and presenting one
+as the other would have been dishonest.
+
+The dock is now ten separate `launcher` plugins, each pointed at one
+real `.desktop` file — `thunar`, `qterminal`, `firefox-esr`,
+`org.xfce.mousepad`, `org.xfce.ristretto`, `org.xfce.Parole`, `atril`,
+`org.pulseaudio.pavucontrol`, `engrampa`, `xfce4-taskmanager`. Every
+filename was confirmed by extracting the real `.deb` directly, not
+guessed from the package name — several don't match
+(`org.xfce.mousepad.desktop`, not `mousepad.desktop`;
+`org.pulseaudio.pavucontrol.desktop`, not `pavucontrol.desktop`; the
+`Parole` in `org.xfce.Parole.desktop` is capitalized) and would have
+been wrong if assumed. All ten packages are already real `Depends` of
+`kali-desktop-xfce`/`kali-desktop-core` (confirmed against the live
+archive), so nothing new needs installing. This won't task-switch or
+show running-window indicators the way a real dock does, but it's
+something this project can actually verify end to end — confirmed
+with the real icons each package ships (extracted from the same real
+`.deb`s), not just the generic fallback icon a missing-icon lookup
+would silently substitute.
 
 **The panel layout** (`config/includes.chroot/usr/local/bin/argos-setup-panel-widgets`,
 run once at first login, same marker-file-gated pattern as before)
@@ -912,20 +953,12 @@ from the property existing) set to `%a %d %b  %H:%M` gives one clean
 line.
 
 **The dock**: per direct feedback that it looked too small, its `size`
-went from 42px to 64px — real visual presence even before anything is
-pinned. One honest, structural limit on verifying its *content*,
-though: `xfce4-docklike-plugin` has never actually loaded in this
-project's own sandbox — confirmed by checking for its `.so` file and
-finding none, after an earlier `apt install` of its `.deb` failed on a
-library version mismatch specific to this Ubuntu-based sandbox (not
-the real Kali target). Every dock screenshot from this sandbox,
-including in this section, shows an empty panel because no plugin
-loaded at all, not "docklike with nothing pinned" — those look
-identical from a screenshot, and conflating them here would be
-dishonest. The panel's size, position, rounding, and translucency are
-confirmed directly; whether `docklike` itself actually renders pinned
-or running apps is not something this sandbox can show, and is what
-the next real boot confirms.
+went from 42px to 64px. Per a later, direct comparison against a real
+macOS screenshot — a dock genuinely full of app icons, not an empty
+pill — `xfce4-docklike-plugin` was replaced outright with ten `launcher`
+plugins (see "The dock" above for the full story and why). This is
+confirmed end to end in this sandbox, including the real icons each
+app ships, not just that the panel itself looks right.
 
 **"Glass."** Rounded, translucent panels — xfce4-panel has no xfconf
 property for panel corner rounding or transparency at all (confirmed
