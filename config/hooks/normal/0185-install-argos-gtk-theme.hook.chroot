@@ -87,13 +87,45 @@ gtk-icon-theme-name=ArgOS
 gtk-application-prefer-dark-theme=false
 EOF
 
+# Rounded, centered, shrink-wrapped bottom dock: xfce4-panel has no
+# xfconf property for panel corner rounding at all (confirmed by
+# reading its real source via `strings` -- no per-panel CSS-class or
+# "radius" property exists), so this has to be a GTK CSS override.
+# `#XfcePanelWindow` is the real, correct selector: confirmed by
+# reading this exact theme's own _xfce.scss
+# (`.xfce4-panel.background#XfcePanelWindow`), then confirmed AGAIN by
+# actually applying it to a live panel in a disposable Xvfb session
+# and screenshotting the result, not trusted from the theme source
+# alone.
+#
+# This one rule, with no per-panel targeting at all, is confirmed
+# (same live test) to affect the top bar and bottom dock correctly
+# differently without needing to -- it's the same global selector for
+# both (xfce4-panel doesn't expose a way to distinguish panel
+# instances in CSS), but a full-width panel's corners sit exactly at
+# the screen edge, where a border-radius has no room to visibly
+# curve, so the top bar (panel-1, full width) renders perfectly square
+# regardless, while the bottom dock (panel-2, shrink-wrapped via
+# length-adjust=true in argos-setup-panel-widgets) has real edges in
+# the middle of the screen where the same radius shows as a clean
+# rounded pill. Confirmed directly, both panels configured together
+# in the same test, not reasoned through and assumed.
+install -d -m 0755 /etc/skel/.config/gtk-3.0
+cat > /etc/skel/.config/gtk-3.0/gtk.css <<'EOF'
+#XfcePanelWindow {
+    border-radius: 16px;
+}
+EOF
+
 # /home/argos and /root already exist by this point in the build, so
 # /etc/skel changes don't retroactively apply to them -- same reason
 # 0165-setup-zsh-powerlevel10k.hook.chroot copies explicitly instead
 # of relying on skel alone.
 install -d -m 0755 /home/argos/.config/gtk-3.0
 cp /etc/skel/.config/gtk-3.0/settings.ini /home/argos/.config/gtk-3.0/settings.ini
+cp /etc/skel/.config/gtk-3.0/gtk.css /home/argos/.config/gtk-3.0/gtk.css
 chown -R argos:argos /home/argos/.config/gtk-3.0
 
 install -d -m 0755 /root/.config/gtk-3.0
 cp /etc/skel/.config/gtk-3.0/settings.ini /root/.config/gtk-3.0/settings.ini
+cp /etc/skel/.config/gtk-3.0/gtk.css /root/.config/gtk-3.0/gtk.css

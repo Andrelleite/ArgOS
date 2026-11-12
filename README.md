@@ -860,14 +860,43 @@ run once at first login, same marker-file-gated pattern as before) now
 defines two panels from scratch via direct `xfconf-query` writes,
 replacing whatever `kali-desktop-xfce` ships by default:
 
-- **Top**: a slim (26px) macOS-menu-bar-style bar — Whisker Menu on the
-  left, an expanding transparent separator, then a status-icon cluster
-  (`indicator`, `pulseaudio`, `power-manager-plugin`, `clock`) on the
-  right, mirroring the reference image's layout.
+- **Top**: a slim (26px) macOS-menu-bar-style bar — Whisker Menu and the
+  tool-finder launcher on the left, an expanding transparent separator,
+  then a status-icon cluster (`indicator`, `pulseaudio`,
+  `power-manager-plugin`, `clock`) on the right, mirroring the
+  reference image's layout. `length-adjust=false` at a fixed `length=100`
+  — always full width, like a real menu bar.
 - **Bottom**: `xfce4-docklike-plugin`, an expanding separator, then the
   system-monitoring widgets this project already had before this pivot
   (`cpugraph`, `systemload`, `netload`, `xfce4-sensors-plugin`) pushed
-  to the right edge, so the dock itself stays uncluttered.
+  to the right edge, so the dock itself stays uncluttered. Per direct
+  request, this is a real dock, not a second full-width bar:
+  `length-adjust=true` with a small base `length` makes it shrink-wrap
+  to whatever its plugins actually need, and plain `p=10` (no
+  left/right corner variant) centers a shrink-wrapped panel
+  horizontally by default — confirmed directly (sandbox test), not
+  assumed from the first test this position string was used in, which
+  happened to be full-width and so never actually exercised the
+  centering behavior.
+
+  Rounded corners come from a GTK CSS rule
+  (`gtk-3.0/gtk.css`, written by 0185 alongside `settings.ini`), not
+  an xfconf property — xfce4-panel has no corner-radius setting of its
+  own (confirmed by reading its real source via `strings`: no such
+  property exists). `#XfcePanelWindow { border-radius: 16px; }` is the
+  real selector this exact theme project's own `_xfce.scss` targets
+  for the panel background (`.xfce4-panel.background#XfcePanelWindow`),
+  confirmed by actually applying it live and screenshotting the
+  result, not trusted from the theme source alone. It's the same
+  global rule for both panels — xfce4-panel has no way to target one
+  panel instance differently in CSS — but that turns out not to
+  matter: a full-width panel's corners sit exactly at the screen edge,
+  where a border-radius has no room to visibly curve, so the top bar
+  renders perfectly square regardless, while the shrink-wrapped bottom
+  dock's real edges (in the middle of the screen) show the same radius
+  as a clean rounded pill. Confirmed directly with both panels
+  configured together in the same test, not reasoned through and
+  assumed.
 
 Two real bugs were found and fixed writing this, not just assumed
 away: the script's own `&`-backgrounding originally used `disown`

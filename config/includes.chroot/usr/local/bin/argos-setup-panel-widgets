@@ -106,10 +106,20 @@ xq -p /plugins/plugin-6 --create -t string -s "clock"
 
 # p=10 confirmed directly (sandbox test) to render at the bottom
 # edge, the same way p=6 (used for panel-1 above) was confirmed to
-# render at the top -- not assumed from the property name alone.
+# render at the top -- not assumed from the property name alone. Per
+# direct request, this is a real dock, not a second full-width bar:
+# length-adjust=true + a small base length (10%, not 100%) makes the
+# panel shrink-wrap to whatever its plugins actually need instead of
+# stretching edge-to-edge -- confirmed directly (sandbox test) that
+# plain "p=10" (no left/right corner variant) centers a shrink-wrapped
+# panel horizontally by default, not just the plugin-less full-width
+# case this was first tested with. The rounded-pill look this enables
+# comes from a GTK CSS rule in 0185-install-argos-gtk-theme's
+# gtk-3.0/gtk.css, not an xfconf property -- xfce4-panel has no
+# corner-radius property of its own.
 xq -p /panels/panel-2/position --create -t string -s "p=10;x=0;y=0"
-xq -p /panels/panel-2/length --create -t int -s 100
-xq -p /panels/panel-2/length-adjust --create -t bool -s false
+xq -p /panels/panel-2/length --create -t int -s 10
+xq -p /panels/panel-2/length-adjust --create -t bool -s true
 xq -p /panels/panel-2/size --create -t int -s 42
 xq -p /panels/panel-2/position-locked --create -t bool -s true
 xq -p /panels/panel-2/plugin-ids --create -t int -s 10 -t int -s 11 -t int -s 12 \
