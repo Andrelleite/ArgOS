@@ -968,15 +968,43 @@ window-level background for some panels but not others, and sorting
 that out fully wasn't finished — not shipped half-working, left as a
 clearly-scoped follow-up instead of a guessed fix.
 
-What this still can't show: whether everything actually looks this
-clean once genuinely booted, real window-manager interaction behavior,
-compositor-dependent effects (this setup's `solid` GTK theme opacity
-deliberately doesn't depend on one, but xfwm4's own frame rendering
-still does), or the exact anti-aliasing/hinting a real Xorg session
-produces — same honest caveat as everywhere else in this section, and
-this sandbox's own Xvfb (software `llvmpipe`, no real compositor)
-couldn't settle the compositing question either way. That's what the
-next real build and boot confirms.
+**Update from a real boot: the compositing question is settled, and
+it's bad news.** xfwm4's own real startup log on an actual VM shows
+`Unsupported GL renderer (llvmpipe (LLVM ..., 256 bits))` — the exact
+same warning this project's own sandbox testing hit — and the
+simplest real test for whether the compositor is doing anything at
+all (does any window cast a soft drop shadow — shadows are
+compositor-only) came back no, on that same real VM. So this isn't a
+sandbox-only artifact: at least some real VirtualBox configurations
+(default/no 3D acceleration) genuinely can't run xfwm4's compositor,
+which means **rounded window corners, drop shadows, and anything else
+that depends on real alpha compositing don't render** on those setups
+— not a config bug, a hardware/hypervisor-acceleration limit.
+`use_compositing=true` stays set (it costs nothing when the compositor
+can't start, and helps on setups where it can), but this is a real,
+user-facing gap worth knowing about rather than assuming away: a VM
+without 3D acceleration enabled will show square window corners
+regardless of what the theme intends.
+
+This same finding also explains a real, separately-reported bug: the
+Whisker Menu rendering with a visibly darkened, muted version of the
+theme's actual (light) colors, even though every piece of theme
+*configuration* checked out correct on that boot (`ThemeName`/
+`IconThemeName` both correctly `ArgOS` — live `xfconf-query`, the
+system-default XML file, and even a stray per-user override all
+agreed — and the `/usr/share/themes/ArgOS` symlink correctly pointed
+at the light build). MacTahoe-gtk-theme's own `fix_whiskermenu()`
+(never actually invoked by 0185/0186, which hand-replicate
+`install.sh`'s real steps rather than executing it) sets the Whisker
+Menu popup's `menu-opacity` to 95 — real alpha transparency, which
+needs working compositing to blend correctly. Without it, the
+"missing" 5% blends against black instead of true transparency,
+uniformly darkening the whole popup regardless of how correctly
+everything else is configured.
+`0190-reassert-argos-branding-over-kali-themes.hook.chroot` now sets
+`menu-opacity=100` explicitly (this file never set it at all before,
+so whiskermenu was using its own built-in default) — fully opaque,
+so this doesn't depend on compositing working at all.
 
 ### Tool menu: 8 flat categories instead of Kali's 64-entry MITRE tree
 

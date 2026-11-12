@@ -117,8 +117,27 @@ theme-name=ArgOS
 icon-theme-name=ArgOS
 EOF
 
+# menu-opacity=100 below (this file never set it at all before, so
+# whiskermenu was using its own, lower, built-in default) -- found
+# from a real boot, not guessed. Confirmed directly (xfwm4's own
+# startup log showing "Unsupported GL renderer (llvmpipe...)", and no
+# visible window shadow anywhere -- the simplest real test for
+# whether xfwm4's compositor is doing anything at all, shadows being
+# compositor-only) that compositing isn't functioning on at least one
+# real VM, matching the exact same GL warning already seen in this
+# project's own sandbox testing. MacTahoe-gtk-theme's own
+# fix_whiskermenu() (never actually called by 0185/0186, which build
+# the theme by hand-replicating install.sh's real steps rather than
+# executing it) nudges this same property to 95 assuming compositing
+# works to blend the transparency correctly -- without a working
+# compositor, a non-100 value blends against black instead of true
+# transparency, uniformly darkening the whole popup, independent of
+# ThemeName/IconThemeName being correctly set (confirmed correct on
+# that same real boot) or anything else about the theme itself. 100
+# removes the dependency on compositing working at all.
 install -d -m 0755 /etc/xdg/xfce4/whiskermenu
 cat > /etc/xdg/xfce4/whiskermenu/defaults.rc <<'EOF'
+menu-opacity=100
 item-icon-size=2
 category-icon-size=1
 hover-switch-category=true
