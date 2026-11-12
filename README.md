@@ -42,8 +42,8 @@ diagram is aspirational.
 │   Panel: top bar (menu · status icons · clock, macOS-menu-bar style) +   │
 │     bottom dock (xfce4-docklike-plugin · cpugraph · systemload ·         │
 │     netload · sensors) · tool-finder search                              │
-│     (argos-setup-panel-widgets / argos-setup-toolfinder-launcher,        │
-│      configured once via direct xfconf-query writes)                     │
+│     (argos-setup-panel-widgets, configured once via direct             │
+│      xfconf-query writes)                                                │
 │   Desktop: ArgOS wallpaper (argos-set-wallpaper, any monitor layout) ·    │
 │     "Install ArgOS" icon → launches Calamares (graphical installer)      │
 └───────────────────────────────────┬──────────────────────────────────────┘
@@ -495,17 +495,45 @@ visible by actually running it under `sh`, not bash) and a live panel
 not picking up a newly-added second panel without being restarted,
 where the obvious fix (`xfce4-panel --restart`) itself hangs.
 
-Still unverified: whether this looks and behaves identically on a
-real boot, not this sandbox's disposable Xvfb session — same honest
-caveat as the rest of this desktop/installer section.
+**Update from a real boot**: a real boot surfaced two more real bugs.
+First, the previously-separate `argos-setup-toolfinder-launcher`
+script (which added a one-click panel launcher via `xfce4-panel
+--add=launcher`, its own independent `/etc/xdg/autostart/` entry) was
+racing this script: both are independent autostart entries with no
+defined ordering, and this script's `--force-array` writes to
+`/panels/panel-1/plugin-ids` fully *replace* the array rather than
+appending to it — so if this script won that race after the launcher
+had already added itself, it would silently erase it, no error either
+side. Folded the launcher directly into this script instead (a fixed
+plugin-7), removing both the race and that script's own `--add=` call
+entirely (same hang risk as `--restart`, never actually exercised
+before since it had apparently been winning its races up to now).
+
+Second, writing that fold-in surfaced a genuinely confusing
+`xfconf-query` quirk: `-p PROP --create -t TYPE -s VALUE --force-array`
+(create before the type/value pair) silently creates an **empty**
+array, no error, exit 0 — only `-p PROP -t TYPE -s VALUE --create
+--force-array` (type/value pair *before* create) actually works for a
+single-element array. This only showed up on multi-value arrays
+working fine either way and masking the single-value case; caught by
+checking the property back after writing it, not by reading the
+command and assuming it was fine, and re-confirmed against a genuinely
+fresh test session after an earlier dirtied one gave a false "it's
+fixed" signal (`--create` is a no-op against a property that already
+exists in any shape, correct or not — a real trap when iterating
+against the same test session repeatedly, not a concern on an actual
+first boot, which never has a pre-existing property to collide with).
 
 The retry-loop bug class already found and fixed in
 `argos-set-wallpaper` — `xfconf-query -c xfce4-panel -p /panels -l`
 returns exit 0 even for a channel that's *never been touched at all*
-(confirmed directly) — was already fixed here and in
-`argos-setup-toolfinder-launcher` in an earlier pass, and both still
-wait for a real `/panels/panel-N` property and for `xfwm4` to actually
-be running before writing anything.
+(confirmed directly) — was already fixed here in an earlier pass, and
+this script still waits for a real `/panels/panel-N` property and for
+`xfwm4` to actually be running before writing anything.
+
+Still unverified: whether this looks and behaves identically on a
+real boot, not this sandbox's disposable Xvfb session — same honest
+caveat as the rest of this desktop/installer section.
 
 ### Default resolution
 
@@ -905,7 +933,7 @@ is removed, instead of erroring anywhere.
 
 Verified for real, not just as well-formed XML: installed
 `xfce4-whiskermenu-plugin` in a throwaway environment, wrote the exact
-same panel-plugin config this project's own `argos-setup-toolfinder-launcher`
+same panel-plugin config this project's own `argos-setup-panel-widgets`
 produces, dropped in a fake tool tagged with the real
 `kali-reconnaissance` category, and popped the actual Whisker Menu
 (`xfce4-popup-whiskermenu`) to confirm *both* that the flat "Recon"/
@@ -1180,24 +1208,21 @@ being added here.
 
 **Also reachable without a terminal**: `argos-toolfinder-gui` wraps the
 same binary in a `zenity` input/output dialog (type a phrase, get a
-scrollable results list), and gets pinned to the panel automatically at
-first login as a launcher plugin
-(`config/includes.chroot/usr/local/bin/argos-setup-toolfinder-launcher`),
-the same `xfce4-panel --add=` mechanism as the system-metrics widgets.
-A launcher plugin starts out empty, though — unlike the metrics
-plugins, it needs its `items` property pointed at a `.desktop` file
-afterward, which means finding the *new* plugin's id. Confirmed for
-real with a throwaway Xvfb + xfconfd + xfwm4 + xfce4-panel session that
-a freshly `--add=`'d plugin shows up as the one new `/plugins/plugin-N`
-entry that wasn't in the panel's property list a moment before, so
-that's how the script finds it — diffing the list, not assuming an id.
-Same honest caveat as the metrics-widget script: that test confirmed
-the mechanism and the exact property schema are real, but the
-sandbox's session-infrastructure gaps (no systemd user session, no
-accessibility bus) meant `--add=launcher` itself didn't reliably fire
-in that improvised rig, so whether this specific script populates the
-panel on an actual booted image's first login is what the next real
-boot tests, same as the metrics widgets before it.
+scrollable results list), and gets pinned to the top bar automatically
+at first login as a `launcher` plugin with its `items` property pointed
+at `argos-toolfinder-gui.desktop` — part of
+`argos-setup-panel-widgets`'s two-panel layout (see "GTK3 + window
+theme" above), not a separate script anymore. It started out as one
+(`argos-setup-toolfinder-launcher`, using `xfce4-panel --add=launcher`
+and diffing the plugin list before/after to find the new id), but that
+turned out to race the panel-layout script — both were independent
+`/etc/xdg/autostart/` entries with no ordering between them, and the
+panel-layout script's array writes would silently erase whatever the
+launcher script had just added if it ran second. Folded directly into
+the panel-layout script instead, confirmed end-to-end (genuinely fresh
+Xvfb + xfconfd + xfwm4 + xfce4-panel session, not a re-typed
+approximation) including a real `xfconf-query` argument-order bug that
+silently created an empty `items` array on the first attempt.
 
 ### Extending any of these
 

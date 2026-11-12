@@ -3,10 +3,24 @@ set -eu
 #
 # Defines ArgOS's own two-panel layout (replacing whatever
 # kali-desktop-xfce ships by default) to match the macOS-style look
-# built in 0185/0186: a slim top bar (menu, status-icon cluster,
-# clock -- like a macOS menu bar) and a bottom panel hosting a real
-# dock-style taskbar plus the system-monitoring widgets this project
-# already had before that pivot.
+# built in 0185/0186: a slim top bar (menu, tool-finder search,
+# status-icon cluster, clock -- like a macOS menu bar) and a bottom
+# panel hosting a real dock-style taskbar plus the system-monitoring
+# widgets this project already had before that pivot.
+#
+# The tool-finder launcher plugin (originally a separate script,
+# argos-setup-toolfinder-launcher, now removed) is defined here too,
+# as a fixed plugin-7 -- it used to add itself via `xfce4-panel
+# --add=launcher` from its own independent /etc/xdg/autostart/ entry,
+# which raced against this script: both are separate autostart
+# entries with no defined ordering between them, and this script's
+# `--force-array` writes to /panels/panel-1/plugin-ids fully replace
+# the array rather than appending to it -- so if this script won that
+# race, it would silently erase the tool-finder plugin the other
+# script had just added, with no error from either side. Folding it
+# in here as one more fixed entry removes the race (and the separate
+# script's own `--add=` call, which has the same hang risk already
+# documented below for `--restart`) entirely.
 #
 # Direct xfconf-query property writes, not `xfce4-panel --add=` --
 # confirmed directly (this project's own earlier testing) that
@@ -65,10 +79,20 @@ xq -p /panels/panel-1/length --create -t int -s 100
 xq -p /panels/panel-1/length-adjust --create -t bool -s false
 xq -p /panels/panel-1/size --create -t int -s 26
 xq -p /panels/panel-1/position-locked --create -t bool -s true
-xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 2 -t int -s 3 \
-    -t int -s 4 -t int -s 5 -t int -s 6 --force-array
+xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 -t int -s 2 \
+    -t int -s 3 -t int -s 4 -t int -s 5 -t int -s 6 --force-array
 
 xq -p /plugins/plugin-1 --create -t string -s "whiskermenu"
+xq -p /plugins/plugin-7 --create -t string -s "launcher"
+# Argument order matters here, confirmed directly: `--create
+# --force-array` placed BEFORE `-t ... -s ...` silently creates an
+# EMPTY array (no error, exit 0) instead of a one-item array -- only
+# caught by actually checking the property back, not assumed from
+# how every other (multi-value) array write in this script is
+# ordered. `-t ... -s ... --create --force-array`, matching the
+# already-tested order the old argos-setup-toolfinder-launcher script
+# used for this exact property, is the order that actually works.
+xq -p /plugins/plugin-7/items -t string -s "argos-toolfinder-gui.desktop" --create --force-array
 xq -p /plugins/plugin-2 --create -t string -s "separator"
 xq -p /plugins/plugin-2/expand --create -t bool -s true
 xq -p /plugins/plugin-2/style --create -t int -s 0
