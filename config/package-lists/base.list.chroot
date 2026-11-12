@@ -38,6 +38,40 @@ exfatprogs
 cryptsetup
 lvm2
 
+# squashfs-tools and efibootmgr -- not needed for the live session
+# itself, but both are real, confirmed dependencies of the "Install
+# ArgOS" path that --apt-recommends false silently dropped, the same
+# way it dropped xserver-xorg and desktop-base before these. Found by
+# systematically resolving every installed package's Recommends
+# against the real Kali index rather than waiting for the next thing
+# to break:
+#   - squashfs-tools: calamares itself Recommends this, and its own
+#     shipped unpackfs.conf (confirmed by reading it directly) unpacks
+#     a `sourcefs: "squashfs"` image -- without the tool to actually
+#     extract one, clicking "Install ArgOS" would very likely fail
+#     partway through, not at boot/live-session time where it'd never
+#     get noticed.
+#   - efibootmgr: grub-efi-amd64-bin Recommends this, and Calamares'
+#     own bootloader.conf explicitly calls out `/usr/bin/efibootmgr`
+#     as a tool its bootloader module may need. Without it, grub-
+#     install's UEFI boot-entry registration on the target disk could
+#     silently fail to register ArgOS as bootable, even if the files
+#     themselves copied over fine.
+squashfs-tools
+efibootmgr
+
+# live-tools -- live-persistence/live-toram/live-medium-eject and
+# friends. Genuinely useful live-session utilities (not just
+# completionism) for a live-USB-first distro; Recommended by
+# live-boot/live-config but dropped by --apt-recommends false like
+# everything above.
+live-tools
+
+# xauth -- Recommended by openssh-client/openssh-server/xclip/
+# xserver-common; needed for X11 cookie-based auth (SSH -X forwarding,
+# some clipboard operations via xclip).
+xauth
+
 # Shell / terminal environment
 bash
 bash-completion
@@ -119,3 +153,21 @@ python3-virtualenv
 cryptsetup-nuke-password
 vboot-kernel-utils
 vboot-utils
+
+# apparmor -- Kali's own kernel package (linux-image-amd64)
+# Recommends this directly: the kernel itself expects this security
+# framework to be present, dropped like everything else by
+# --apt-recommends false. A security-focused distro going without the
+# MAC framework its own kernel assumes is there isn't a tradeoff worth
+# making silently.
+apparmor
+
+# dnsmasq-base -- Recommended by network-manager; without it,
+# NetworkManager's own hotspot/shared-connection mode (acting as a
+# Wi-Fi AP, genuinely relevant on a wireless-pentesting distro) doesn't
+# have the DHCP/DNS component it needs.
+dnsmasq-base
+
+# easy-rsa -- Recommended by openvpn; a small, self-contained CA
+# toolkit for generating OpenVPN certs/keys, useful on its own.
+easy-rsa

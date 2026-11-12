@@ -117,3 +117,22 @@ desktop-base
 # it automatically, with the activating symlink already present in the
 # package itself, not something this hook needs to wire up.
 fonts-nerd-symbols
+
+# thunar-volman -- found the same way as desktop-base: Recommended by
+# BOTH thunar and xfce4 (two independent sources agreeing it matters),
+# dropped by --apt-recommends false. This is what actually handles
+# auto-mount/autoplay policy when removable media is inserted --
+# gvfs-backends/gvfs-fuse above make mounting *possible*, this is what
+# makes it happen automatically without the user digging through a
+# file manager menu. Directly relevant on a forensics-adjacent distro
+# that deals with USB media constantly.
+thunar-volman
+
+# tumbler -- thumbnail generation for Thunar/xfdesktop/Ristretto.
+# Recommended by thunar, xfdesktop4, AND ristretto. Not just cosmetic:
+# the real crash log from the xfdesktop bug this project just fixed
+# (0176-fix-xfdesktop-fallback-image.hook.chroot) shows
+# "Thumbnailer failed calling GetFlavors" as a warning right before the
+# fatal part -- this was already visibly missing, just not the
+# headline symptom.
+tumbler

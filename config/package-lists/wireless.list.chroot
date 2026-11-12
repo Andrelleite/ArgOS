@@ -21,3 +21,11 @@ rfkill
 sakis3g
 spooftooph
 voiphopper
+
+# wireless-regdb -- Recommended by both iw and network-manager, dropped
+# by --apt-recommends false like everything else in this category.
+# The regulatory-domain database affects which channels/power levels
+# the kernel's wireless stack considers legal; without it, some iw/
+# NetworkManager wireless operations can behave inconsistently
+# depending on what (if anything) the driver defaults to.
+wireless-regdb

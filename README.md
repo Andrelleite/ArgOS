@@ -316,6 +316,96 @@ in these lists is dead/superseded, leave a dated comment explaining why
 before removing it, the same way the entry above does, so "why isn't X
 here anymore" has an answer in the file itself.
 
+## Dependency audit: what `--apt-recommends false` actually drops
+
+`--apt-recommends false` (set globally in `auto/config`) has caused
+four separate real bugs across this project so far, each found one
+boot at a time: the missing X server (boots to a TTY), the missing
+`desktop-base` (desktop stays a black canvas, xfdesktop crashes
+outright), a missing Nerd Font (Powerlevel10k's icons render as empty
+boxes), and the icon-theme-inheritance mistake. Waiting for the next
+one to surface the same way wasn't good enough, so instead of reacting
+to the fifth crash, this project now has one: a real dependency
+resolver run against the actual Kali package index, not a guess.
+
+The method: parse the real `Packages` files for `main`/`contrib`/
+`non-free`/`non-free-firmware`, compute the transitive closure of
+every package this project's `.list.chroot` files pull in (following
+only `Depends`/`Pre-Depends`, exactly matching what
+`--apt-recommends false` actually installs), then for every package in
+that closure, check whether each of its `Recommends` is satisfied by
+something already in the closure. What's left over is the authoritative
+list of everything `--apt-recommends false` is dropping project-wide —
+261 distinct entries, the overwhelming majority genuinely cosmetic or
+irrelevant (locale packages, Perl/Python sub-dependencies, GNOME-Shell
+extensions for a desktop this project doesn't use). Each candidate
+below was individually verified against the real package before being
+added — not every Recommends is a bug, so none of this is a blanket
+"just Recommend everything" fix:
+
+- **`squashfs-tools`** — `calamares` itself Recommends this, and its
+  own shipped `unpackfs.conf` (read directly) unpacks a
+  `sourcefs: "squashfs"` image. Without the tool to actually extract
+  one, clicking "Install ArgOS" would very likely have failed partway
+  through — at install time, not boot/live-session time, where it
+  would never have gotten noticed until someone actually tried to
+  install.
+- **`efibootmgr`** — `grub-efi-amd64-bin` Recommends this, and
+  Calamares' own `bootloader.conf` explicitly names
+  `/usr/bin/efibootmgr` as a tool its bootloader module may need.
+  Without it, `grub-install`'s UEFI boot-entry registration on the
+  target disk could silently fail, even if the files themselves copied
+  over fine — the install would "succeed" and the result just wouldn't
+  boot.
+- **`thunar-volman`** — Recommended by *both* `thunar` and `xfce4`
+  independently. Handles auto-mount/autoplay policy for removable
+  media; `gvfs-backends`/`gvfs-fuse` (already installed) make mounting
+  *possible*, this is what makes it automatic. Directly relevant on a
+  distro that deals with USB media constantly.
+- **`tumbler`** — thumbnail generation for Thunar/xfdesktop/Ristretto,
+  Recommended by all three. Not purely cosmetic: the real crash log
+  from the xfdesktop bug above shows "Thumbnailer failed calling
+  GetFlavors" as a warning right before the fatal part — this was
+  already visibly missing, just not the headline symptom at the time.
+- **`wireless-regdb`** — Recommended by both `iw` and
+  `network-manager`. Affects which channels/power levels the kernel's
+  wireless stack considers legal; relevant on a wireless-pentesting
+  distro specifically.
+- **`xauth`** — Recommended by `openssh-client`/`openssh-server`/
+  `xclip`/`xserver-common`. X11 cookie-based auth, needed for SSH `-X`
+  forwarding and some `xclip` clipboard operations.
+- **`live-tools`** — Recommended by `live-boot`/`live-config`.
+  Genuinely useful live-session utilities (`live-persistence`,
+  `live-toram`, `live-medium-eject`), not just completionism, for a
+  live-USB-first distro.
+- **`apparmor`** — Kali's own `linux-image-amd64` kernel package
+  Recommends this directly: the kernel itself expects this security
+  framework to be present. A security-focused distro going without the
+  MAC framework its own kernel assumes is there isn't a tradeoff worth
+  making silently.
+- **`dnsmasq-base`** — Recommended by `network-manager`; without it,
+  NetworkManager's own hotspot/shared-connection mode (acting as a
+  Wi-Fi AP) doesn't have the DHCP/DNS component it needs.
+- **`easy-rsa`** — Recommended by `openvpn`; a small, self-contained CA
+  toolkit for generating OpenVPN certs/keys.
+- **`photorec`** — `testdisk`'s own companion file-carving/recovery
+  tool, from the same upstream project but a separate Debian package.
+  `testdisk` Recommends it; this project already shipped `testdisk`
+  without its most commonly-paired tool.
+
+One real candidate turned out to be a dead end: `python3-pypykatz`
+Recommends `volatility3`, which sounded like a significant memory-
+forensics gap — but `volatility3` doesn't exist anywhere in Kali's
+archive under that name (checked directly, not assumed), so there was
+nothing to add. A handful of other candidates were deliberately **not**
+added after checking what they'd actually bring in — `gnome-keyring`
+(security-sensitive credential storage with its own PAM-integration
+concerns, not a drop-in), the dozen single-purpose `xfce4-*-plugin`
+extras `kali-desktop-xfce` recommends (optional panel add-ons a user
+can enable themselves, not things that silently break anything by
+being absent), and the various GNOME-Shell/KDE-specific recommends that
+don't apply to an Xfce-only system at all.
+
 ## Default login
 
 The live image creates one user: **`argos` / `argos`**, with passwordless
@@ -410,6 +500,21 @@ exactly like a specific reference screenshot someone might have in
 mind — these are Xfce's own stock plugins with their own default
 styling, not custom-icon widgets recreating another design pixel for
 pixel.
+
+**Found during a systematic audit, not another boot report**: this
+script (and `argos-setup-toolfinder-launcher`) had the exact same bug
+class already found and fixed in `argos-set-wallpaper` — `xfconf-query
+-c xfce4-panel -p /panels -l` returns exit 0 even for a channel that's
+*never been touched at all* (confirmed directly), so the old retry
+loop broke out on its first attempt regardless of whether xfce4-panel
+had created a real panel yet. It happened to not visibly break in
+practice (xfce4-panel populates its own defaults fast enough, unlike
+xfdesktop), but "happened to not break" isn't the same as "correct,"
+so both scripts now wait for a real `/panels/panel-N` property to
+exist. Both also now wait for `xfwm4` to actually be running first —
+`xfce4-panel --add=` genuinely needs a window manager present
+(confirmed directly: without one, it fails an internal assertion and
+does nothing), which neither script was checking for at all before.
 
 ### Default resolution
 

@@ -4,6 +4,12 @@
 
 sleuthkit
 testdisk
+
+# photorec -- testdisk's own companion file-carving/recovery tool.
+# Ships from the same upstream project as testdisk but as a separate
+# Debian package; testdisk Recommends it, dropped by
+# --apt-recommends false like everything else found this round.
+photorec
 foremost
 scalpel
 binwalk
