@@ -1,0 +1,31 @@
+{
+  "distribution": {
+     "import_bookmarks": false,
+     "make_chrome_default": false,
+     "make_chrome_default_for_user": false,
+     "suppress_first_run_default_browser_prompt": true,
+     "skip_first_run_ui": true,
+     "create_all_shortcuts": false
+  },
+  "browser": {
+     "show_home_button": false,
+     "check_default_browser" : false
+  },
+  "bookmark_bar": {
+     "show_on_all_tabs": false
+  },
+  "net": {
+     "network_prediction_options": 2
+  },
+  "search": {
+     "suggest_enabled": false
+  },
+  "dns_prefetching": {
+     "enabled": false
+  },
+  "credentials_enable_service": false,
+  "credentials_enable_autosignin": false,
+  "default_apps": "noinstall",
+  "hide_web_store_icon": true,
+  "homepage_is_newtabpage": true
+}

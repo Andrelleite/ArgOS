@@ -910,6 +910,68 @@ way to locally verify the result first, a meaningfully bigger risk than
 everything else in this section. Left out rather than shipped
 half-verified; worth a dedicated pass of its own if still wanted.
 
+### Tool menu: 8 flat categories instead of Kali's 64-entry MITRE tree
+
+Per direct request that tool navigation be "way easier," not just
+re-skinned: `kali-menu` ships its own application menu
+(`/etc/xdg/menus/applications-merged/kali-applications.menu`) with 64
+distinct categories following MITRE ATT&CK phase names, often nested
+two levels deep (Reconnaissance → Host Information → ...). Every
+installed tool's own `.desktop` file already carries one or more of
+these exact `kali-*` category tags — the menu structure is just which
+tags get grouped under which visible heading, so replacing it doesn't
+mean touching a single tool's `.desktop` file.
+
+`config/includes.chroot/etc/xdg/menus/applications-merged/argos-applications.menu`
+re-buckets all 66 real category tags (confirmed by extracting the real
+`kali-menu` package and grepping its actual `<Category>` tags, not
+assumed) into 8 flat groups matching this project's own package-list
+taxonomy, already established elsewhere in this README: **Recon**,
+**Web**, **Wireless**, **Password**, **Exploit**, **Post-Exploit**,
+**Forensics**, **System**. No nesting. `config/hooks/normal/0180-remove-upstream-branding-leftovers.hook.chroot`
+removes `kali-applications.menu` itself — both files live in the same
+merge directory, so leaving Kali's in place would just show every tool
+in both structures at once.
+
+The remapping was built and checked programmatically, not by hand —
+hand-transcribing 66 category names into 8 buckets is exactly the kind
+of thing that silently drops one or duplicates another, so a small
+script cross-checked every real category against the mapping before
+any XML got written, and failed loudly (twice, while writing this)
+when it found an unmapped or double-mapped entry. That same check now
+lives permanently in `scripts/argos-preflight.sh`: it fetches the
+*real, current* `kali-menu` package at preflight time and fails the
+build if Kali has added a category upstream that ArgOS's menu doesn't
+map — without this, a tool using only a brand-new upstream category
+would just quietly vanish from the menu once `kali-applications.menu`
+is removed, instead of erroring anywhere.
+
+Verified for real, not just as well-formed XML: installed
+`xfce4-whiskermenu-plugin` in a throwaway environment, wrote the exact
+same panel-plugin config this project's own `argos-setup-toolfinder-launcher`
+produces, dropped in a fake tool tagged with the real
+`kali-reconnaissance` category, and popped the actual Whisker Menu
+(`xfce4-popup-whiskermenu`) to confirm *both* that the flat "Recon"/
+"Web"/"Password"/etc. categories render at all and that the fake tool
+correctly lands under "Recon" rather than nowhere. Icons are plain
+standard freedesktop names (`edit-find`, `dialog-password`,
+`network-wireless`, etc.) rather than anything Kali-specific, so
+nothing here can render a Kali logo even as a fallback.
+
+### Browser defaults: no Kali/OffSec bookmarks or homepage
+
+`kali-defaults-desktop` diverts (confirmed by reading its postinst
+directly) real, active config for both default browsers: Chromium's
+`master_preferences` imports a bookmarks bar full of kali.org/OffSec/
+Exploit-DB links and forces its homepage to a local Kali-branded page;
+Firefox ESR's `distribution.ini`/`policies.json` do the same (`id=Kali`,
+the same bookmark set, homepage pointed at the same local page). Both
+get a clean ArgOS override: Chromium no longer imports any bookmarks
+at all and opens to its own new-tab page; Firefox's distribution id is
+`ArgOS` with a single bookmark (this project's own GitHub repo) and no
+homepage override, falling back to Firefox's own default rather than
+a custom page built just to replace Kali's.
+
 **What's deliberately *not* touched**, because doing it properly is real
 design/engineering work, not a config override, and claiming otherwise
 would be dishonest:
@@ -918,14 +980,6 @@ would be dishonest:
   Flat-Remix's own design; only its accent color was switched (see
   above). A genuinely custom icon set is a much larger design
   undertaking than a theme build.
-- The Xfce "Whisker Menu" still has Kali's own application-category
-  structure (`kali-menu`'s `.directory` files, MITRE-ATT&CK-style names
-  like `kali-reconnaissance`) — the menu button and default favorites
-  are now ArgOS's own (see below), but replacing the category tree
-  itself would mean reorganizing every installed tool's `.desktop`
-  file, a much larger undertaking than a config override.
-- Firefox ESR's default start page/search config is whatever
-  `kali-themes`/Kali's Firefox config package sets, unchanged.
 - **Package names themselves** (`kali-archive-keyring`, `kali-desktop-xfce`,
   `kali-linux-core`, `kali-tools-*`, etc.) still say "kali" — that's the
   direct tradeoff of bootstrapping from Kali's actual repository instead

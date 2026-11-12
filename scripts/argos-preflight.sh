@@ -92,12 +92,65 @@ done
 echo
 echo "argos-preflight: checked ${CHECKED_COUNT} package entries."
 if [ "${MISSING_COUNT}" -eq 0 ]; then
-    echo "argos-preflight: all packages resolve against ${SUITE}. Safe to build."
-    exit 0
+    echo "argos-preflight: all packages resolve against ${SUITE}."
 else
     echo "argos-preflight: ${MISSING_COUNT} package(s) do not currently resolve (see FAIL lines above)."
     echo "argos-preflight: comment them out (with a note) or find the renamed/replacement"
     echo "argos-preflight: package before running a full build -- see README's package-list"
     echo "argos-preflight: section for how nikto/wpscan were handled as a precedent."
+fi
+
+# ArgOS's own application menu (config/includes.chroot/etc/xdg/menus/
+# applications-merged/argos-applications.menu) replaces kali-menu's
+# with a flat, 8-category structure -- but it re-buckets tools by the
+# exact kali-* Category tags each tool's own .desktop file already
+# carries, hardcoded into a static file at the time it was written. If
+# kali-menu ever adds a new Category tag upstream, any tool using only
+# that new tag would have no top-level menu entry at all once
+# kali-applications.menu is removed (0180-remove-upstream-branding-
+# leftovers.hook.chroot) -- not a crash, just a tool quietly missing
+# from navigation, exactly the kind of thing this project doesn't want
+# left to chance. So: fetch the real, current kali-menu package and
+# diff its actual Category tags against ours.
+ARGOS_MENU="${REPO_ROOT}/config/includes.chroot/etc/xdg/menus/applications-merged/argos-applications.menu"
+MENU_MISSING_COUNT=0
+
+if [ -f "${ARGOS_MENU}" ]; then
+    echo
+    echo "argos-preflight: checking ArgOS's menu categories cover every real kali-menu Category tag"
+    # main.gz was already fetched by the package-availability loop above
+    # (component="main"); reused here rather than fetched again.
+    KALI_MENU_PATH=$(gunzip -c "${WORKDIR}/main.gz" | awk '/^Package: kali-menu$/,/^$/' | grep '^Filename:' | awk '{print $2}')
+    if [ -n "${KALI_MENU_PATH}" ] && curl -fsSL -m 60 "${MIRROR}/${KALI_MENU_PATH}" -o "${WORKDIR}/kali-menu.deb" 2>/dev/null; then
+        mkdir -p "${WORKDIR}/kali-menu-x"
+        if dpkg-deb -x "${WORKDIR}/kali-menu.deb" "${WORKDIR}/kali-menu-x" 2>/dev/null; then
+            KALI_MENU_FILE="${WORKDIR}/kali-menu-x/etc/xdg/menus/applications-merged/kali-applications.menu"
+            if [ -f "${KALI_MENU_FILE}" ]; then
+                grep -oE '<Category>[a-z0-9-]+</Category>' "${KALI_MENU_FILE}" | sed 's/<\/*Category>//g' | sort -u > "${WORKDIR}/kali-categories.txt"
+                grep -oE '<Category>[a-z0-9-]+</Category>' "${ARGOS_MENU}" | sed 's/<\/*Category>//g' | sort -u > "${WORKDIR}/argos-categories.txt"
+                UNMAPPED=$(comm -23 "${WORKDIR}/kali-categories.txt" "${WORKDIR}/argos-categories.txt")
+                if [ -n "${UNMAPPED}" ]; then
+                    echo "FAIL  kali-menu now has categories ArgOS's menu doesn't map:"
+                    echo "${UNMAPPED}" | sed 's/^/    /'
+                    MENU_MISSING_COUNT=$(printf '%s\n' "${UNMAPPED}" | grep -c .)
+                else
+                    echo "  ok: every real kali-menu category is covered by argos-applications.menu"
+                fi
+            else
+                echo "  (kali-menu package no longer ships kali-applications.menu at the expected path -- skipping this check)"
+            fi
+        fi
+    else
+        echo "  (could not fetch kali-menu .deb -- skipping this check, not treated as a failure)"
+    fi
+fi
+
+if [ "${MISSING_COUNT}" -eq 0 ] && [ "${MENU_MISSING_COUNT}" -eq 0 ]; then
+    echo
+    echo "argos-preflight: safe to build."
+    exit 0
+else
+    echo
+    echo "argos-preflight: issues found above -- fix before running a full build."
     exit 1
 fi

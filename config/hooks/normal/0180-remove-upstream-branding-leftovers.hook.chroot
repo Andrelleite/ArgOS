@@ -41,3 +41,20 @@ fi
 if command -v gtk-update-icon-cache >/dev/null 2>&1 && [ -d /usr/share/icons/hicolor ]; then
     gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
 fi
+
+# 3. kali-menu ships its own application menu
+#    (/etc/xdg/menus/applications-merged/kali-applications.menu), a
+#    64-category tree following MITRE ATT&CK phase names, often nested
+#    two levels deep (Reconnaissance > Host Information > ...). Per
+#    direct request to make tool navigation actually easy, ArgOS ships
+#    its own flat, 8-category menu
+#    (config/includes.chroot/etc/xdg/menus/applications-merged/argos-applications.menu)
+#    re-bucketing the exact same underlying Category tags every tool's
+#    own .desktop file already carries -- no .desktop file anywhere
+#    needed to change. Both files live in the same merge directory, so
+#    leaving kali-applications.menu in place would just show every
+#    tool in both structures at once; removing it is the only way to
+#    get one clean tree instead of two overlapping ones.
+if [ -f /etc/xdg/menus/applications-merged/kali-applications.menu ]; then
+    rm -f /etc/xdg/menus/applications-merged/kali-applications.menu
+fi

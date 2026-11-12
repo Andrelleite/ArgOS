@@ -1,0 +1,24 @@
+{
+  "policies": {
+    "CaptivePortal": false,
+    "DisplayBookmarksToolbar": true,
+    "DisableTelemetry": true,
+    "NetworkPrediction": false,
+    "NoDefaultBookmarks": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+
+    "DNSOverHTTPS": {
+      "Enabled": false
+    },
+
+    "FirefoxHome": {
+      "Search": true,
+      "TopSites": true,
+      "Highlights": false,
+      "Pocket": false,
+      "Snippets": false,
+      "Locked": false
+    }
+  }
+}
