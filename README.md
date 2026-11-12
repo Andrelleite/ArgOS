@@ -624,10 +624,12 @@ real packages' files, not assumed):
 - **GRUB menu** — `GRUB_DISTRIBUTOR="ArgOS"` added alongside the existing
   theme/background config.
 - **Login screen (lightdm) background** —
-  `config/includes.chroot/etc/lightdm/lightdm-gtk-greeter.conf` points
-  `background=` at ArgOS's own logo-on-flat-background image instead of
-  Kali's default wallpaper, rather than overwriting Kali's actual
-  wallpaper files in place.
+  `/etc/lightdm/lightdm-gtk-greeter.conf` (written by
+  `0190-reassert-argos-branding-over-kali-themes.hook.chroot`, not a
+  plain `config/includes.chroot` file — see that hook's own comments
+  for why) points `background=` at ArgOS's own logo-on-flat-background
+  image instead of Kali's default wallpaper, rather than overwriting
+  Kali's actual wallpaper files in place.
 - **Desktop wallpaper** — `config/includes.chroot/usr/local/bin/argos-set-wallpaper`,
   run once per session via `/etc/xdg/autostart/`. This discovers
   whichever `xfce4-desktop` xfconf properties actually exist on the
@@ -724,10 +726,13 @@ real packages' files, not assumed):
 **Two branding leaks found from an actual booted image, not guessed**:
 the panel's start-menu button was still Kali's own dragon icon, and an
 "Install Debian" icon kept reappearing on the desktop next to "Install
-ArgOS." Both traced back to the same mechanism — packages whose
-*postinst scripts* install their own config over a path at install
-time, before our `includes.chroot`/hooks ever run, so a file we'd never
-touched was still winning:
+ArgOS." The first traced back to a file we simply hadn't overridden
+at all yet, not a timing race with package postinst scripts — a
+later pass (see "GTK3 + window theme" below) checked live-build's own
+real build order directly and found `config/includes.chroot` is
+copied in *after* package installation/configuration, so a plain file
+override here already wins against a postinst script's own default
+on a clean build; no race to lose:
 
 - **Whisker Menu button + favorites** — `kali-themes`'s postinst
   *diverts* a long list of config files during package install
@@ -735,10 +740,12 @@ touched was still winning:
   `/etc/xdg/xfce4/whiskermenu/defaults.rc`, where `button-icon=kali-panel-menu`
   and the default favorites list pointed at `kali-www`/`kali-tools`/
   `kali-docs`/`kali-bugs`/`offsec-training`/`exploit-database`/`vulnhub`.
-  `config/includes.chroot/etc/xdg/xfce4/whiskermenu/defaults.rc` now
-  overrides it directly (same mechanism already relied on for
-  `helpers.rc`): `button-icon=argos-panel-menu`, a real icon shipped at
-  every standard `hicolor` size under
+  `/etc/xdg/xfce4/whiskermenu/defaults.rc` (now written by
+  `0190-reassert-argos-branding-over-kali-themes.hook.chroot` for
+  extra robustness — see that hook's own comments — rather than a
+  plain `config/includes.chroot` file, though either placement
+  resolves this specific file) overrides it directly: `button-icon=argos-panel-menu`,
+  a real icon shipped at every standard `hicolor` size under
   `/usr/share/icons/hicolor/*/apps/argos-panel-menu.png` (generated from
   the same logo source as the wallpapers/Plymouth/GRUB art), and the
   Kali/OffSec-link favorites dropped.

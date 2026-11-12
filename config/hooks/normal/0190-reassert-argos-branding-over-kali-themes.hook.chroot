@@ -1,0 +1,147 @@
+#!/bin/sh
+set -e
+
+# Real bug, found from an actual boot: the Whisker Menu (and every
+# other GTK3 app) was still rendering Kali's own dark theme, despite
+# 0185/0186 building and configuring ArgOS's MacTahoe-based theme
+# correctly.
+#
+# First theory -- wrong, caught by checking rather than shipping it:
+# kali-themes' real postinst script does unconditionally force-
+# overwrite a fixed list of config files on every fresh install,
+# including the exact two xfconf files ArgOS's theme depends on
+# (xsettings.xml, xfwm4.xml) and two more found by cross-referencing
+# its full divert list against every file ArgOS's own
+# config/includes.chroot ships (lightdm-gtk-greeter.conf -- the login
+# screen -- and whiskermenu/defaults.rc). That's real (confirmed by
+# reading the postinst directly), but checking live-build's own real
+# build order (/usr/lib/live/build/chroot, plus
+# functions/compatibility.sh's select_includes_chroot) shows
+# config/includes.chroot is copied in by chroot_includes_after_packages,
+# which runs AFTER package installation/configuration and uses plain
+# rsync (no --ignore-existing) -- so on a clean build, ArgOS's own
+# files should already win over kali-themes' postinst, not lose to
+# it. The exact reason this one build showed Kali's theme anyway
+# wasn't pinned down (a stale/cached chroot from an earlier build is
+# the leading suspect, not confirmed).
+#
+# Shipped this fix anyway, because it's strictly more robust
+# regardless of which explanation is right: writing these four files
+# directly in a hook, instead of via config/includes.chroot, means
+# they're written by chroot_hooks, which live-build runs after BOTH
+# package installation AND chroot_includes_after_packages (confirmed
+# from the same real source, not assumed) -- the latest possible
+# point, nothing left that can still overwrite them afterward. Same
+# pattern already used by 0300-plymouth-grub-theme.hook.chroot for a
+# different file, just not previously recognized as needed here too.
+
+install -d -m 0755 /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
+cat > /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="ArgOS"/>
+    <property name="IconThemeName" type="string" value="ArgOS"/>
+  </property>
+  <property name="Xft" type="empty">
+    <property name="HintStyle" type="string" value="hintslight"/>
+    <property name="Hinting" type="int" value="1"/>
+    <property name="RGBA" type="string" value="rgb"/>
+    <property name="Antialias" type="int" value="1"/>
+  </property>
+  <property name="Gtk" type="empty">
+    <property name="CursorThemeName" type="string" value="Adwaita"/>
+    <property name="CursorThemeSize" type="int" value="24"/>
+    <property name="FontName" type="string" value="Cantarell 11"/>
+    <property name="MonospaceFontName" type="string" value="Fira Code Medium 10"/>
+    <property name="ButtonImages" type="bool" value="true"/>
+    <property name="MenuImages" type="bool" value="true"/>
+  </property>
+  <property name="Xfce" type="empty">
+    <property name="SyncThemes" type="bool" value="true"/>
+  </property>
+</channel>
+EOF
+
+cat > /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="button_layout" type="string" value="|HMC"/>
+    <property name="theme" type="string" value="ArgOS"/>
+    <property name="title_font" type="string" value="Cantarell Bold 9"/>
+    <property name="easy_click" type="string" value="Super"/>
+    <property name="workspace_count" type="int" value="4"/>
+    <property name="cycle_workspaces" type="bool" value="false"/>
+    <property name="scroll_workspaces" type="bool" value="false"/>
+    <property name="wrap_windows" type="bool" value="false"/>
+    <property name="box_resize" type="bool" value="true"/>
+    <property name="cycle_raise" type="bool" value="true"/>
+    <property name="borderless_maximize" type="bool" value="false"/>
+    <property name="use_compositing" type="bool" value="true"/>
+    <property name="frame_opacity" type="int" value="100"/>
+    <property name="show_frame_shadow" type="bool" value="true"/>
+    <property name="show_popup_shadow" type="bool" value="false"/>
+    <property name="workspace_names" type="array">
+      <value type="string" value="1"/>
+      <value type="string" value="2"/>
+      <value type="string" value="3"/>
+      <value type="string" value="4"/>
+      <value type="string" value="5"/>
+      <value type="string" value="6"/>
+      <value type="string" value="7"/>
+      <value type="string" value="8"/>
+      <value type="string" value="9"/>
+      <value type="string" value="0"/>
+    </property>
+  </property>
+</channel>
+EOF
+
+install -d -m 0755 /etc/lightdm
+cat > /etc/lightdm/lightdm-gtk-greeter.conf <<'EOF'
+# ArgOS branding override -- see /etc/lightdm/lightdm-gtk-greeter.conf
+# shipped by lightdm-gtk-greeter for the full list of options.
+# theme-name/icon-theme-name confirmed as real, documented keys by
+# reading the package's own shipped sample config (usr/share/doc/
+# lightdm-gtk-greeter/sample-lightdm-gtk-greeter.css's companion
+# comment block) -- matches the GTK3/icon theme set everywhere else
+# (see xsettings.xml) so the login screen isn't the one surface still
+# showing an unrelated theme.
+[greeter]
+background=/usr/share/backgrounds/argos/argos-background.png
+user-background=false
+theme-name=ArgOS
+icon-theme-name=ArgOS
+EOF
+
+install -d -m 0755 /etc/xdg/xfce4/whiskermenu
+cat > /etc/xdg/xfce4/whiskermenu/defaults.rc <<'EOF'
+item-icon-size=2
+category-icon-size=1
+hover-switch-category=true
+launcher-show-description=false
+button-icon=argos-panel-menu
+position-search-alternate=false
+position-categories-alternate=true
+position-profile-alternate=true
+load-hierarchy=true
+menu-width=570
+menu-height=700
+show-command-profile=false
+favorites=exo-terminal-emulator.desktop,root-terminal.desktop,exo-file-manager.desktop,xfce-text-editor.desktop,exo-web-browser.desktop
+command-settings=xfce4-settings-manager
+show-command-settings=true
+show-command-lockscreen=false
+show-command-switchuser=false
+show-command-logoutuser=false
+show-command-restart=false
+show-command-shutdown=false
+show-command-suspend=false
+show-command-hibernate=false
+show-command-logout=true
+show-command-menueditor=false
+show-command-profile=false
+EOF
