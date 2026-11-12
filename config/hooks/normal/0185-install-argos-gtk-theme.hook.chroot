@@ -128,11 +128,31 @@ EOF
 # panel content genuinely blends with whatever's behind it. 0.55
 # chosen by checking actual text legibility over it, not picked
 # blind -- confirmed readable in a live screenshot.
+#
+# The padding rules below are a direct response to the bar looking
+# "hammered" (cramped, items touching) per direct feedback -- plain
+# `.xfce4-panel button` icons (whiskermenu, the status-icon cluster)
+# had zero breathing room by default. Confirmed directly in a live
+# screenshot that this padding alone visibly opens up the icon
+# cluster. It does NOT reach inside cpugraph/systemload/netload's own
+# internal rendering (they're not `.xfce4-panel button`s, and no
+# "hide label" property was found for them after checking their real
+# binaries directly) -- a real spacer plugin between them
+# (argos-setup-panel-widgets) handles that gap instead.
 install -d -m 0755 /etc/skel/.config/gtk-3.0
 cat > /etc/skel/.config/gtk-3.0/gtk.css <<'EOF'
 .xfce4-panel.background#XfcePanelWindow {
     border-radius: 16px;
     background-color: rgba(245, 245, 245, 0.55);
+}
+.xfce4-panel button,
+.xfce4-panel .xfce4-panel-widget {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+.xfce4-panel {
+    padding-left: 6px;
+    padding-right: 6px;
 }
 EOF
 

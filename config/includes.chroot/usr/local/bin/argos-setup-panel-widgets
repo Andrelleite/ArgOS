@@ -88,7 +88,7 @@ xq -p /panels --create -t int -s 1 -t int -s 2 --force-array
 xq -p /panels/panel-1/position --create -t string -s "p=6;x=0;y=0"
 xq -p /panels/panel-1/length --create -t int -s 100
 xq -p /panels/panel-1/length-adjust --create -t bool -s false
-xq -p /panels/panel-1/size --create -t int -s 30
+xq -p /panels/panel-1/size --create -t int -s 34
 xq -p /panels/panel-1/position-locked --create -t bool -s true
 
 # Two expanding separators (plugin-2 and plugin-8), one on each side
@@ -108,7 +108,7 @@ xq -p /panels/panel-1/position-locked --create -t bool -s true
 # panels with visible gaps, which matters more per direct feedback.
 xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 -t int -s 3 \
     -t int -s 4 -t int -s 5 -t int -s 2 -t int -s 6 -t int -s 8 -t int -s 12 \
-    -t int -s 13 -t int -s 14 --force-array
+    -t int -s 20 -t int -s 13 -t int -s 14 --force-array
 
 xq -p /plugins/plugin-1 --create -t string -s "whiskermenu"
 xq -p /plugins/plugin-7 --create -t string -s "launcher"
@@ -148,6 +148,20 @@ xq -p /plugins/plugin-8 --create -t string -s "separator"
 xq -p /plugins/plugin-8/expand --create -t bool -s true
 xq -p /plugins/plugin-8/style --create -t int -s 0
 xq -p /plugins/plugin-12 --create -t string -s "cpugraph"
+# plugin-20: a small, non-expanding separator between cpugraph and
+# systemload -- direct feedback called the metrics cluster "hammered"
+# (cramped, no breathing room). A separator here is confirmed safe;
+# the same idea tried between systemload and netload instead hit a
+# real, reproducible rendering bug (netload's own text split apart
+# and part of it relocated to the far right of the whole bar) --
+# confirmed directly in a live screenshot, not just suspected, so that
+# placement was dropped rather than shipped broken. No "hide label"
+# xfconf property was found for systemload/netload after checking
+# their real binaries directly (unlike cpugraph, which has one), so
+# this spacer is the real, working fix for the gap it covers.
+xq -p /plugins/plugin-20 --create -t string -s "separator"
+xq -p /plugins/plugin-20/style --create -t int -s 0
+xq -p /plugins/plugin-20/expand --create -t bool -s false
 xq -p /plugins/plugin-13 --create -t string -s "systemload"
 xq -p /plugins/plugin-14 --create -t string -s "netload"
 # xfce4-sensors-plugin dropped from the default panel (still

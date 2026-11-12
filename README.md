@@ -964,6 +964,22 @@ wallpaper visibly tints through both panels), just without the
 softening a true blur would add. 0.55 was checked for actual text
 legibility over it in a live screenshot, not picked blind.
 
+**Polish pass, per direct feedback that the bar looked "hammered"
+(cramped)**: plain `.xfce4-panel button` icons (Whisker Menu,
+tool-finder, the status-icon cluster) had zero padding by default —
+`gtk.css` now gives them breathing room directly, confirmed to visibly
+open up the icon cluster in a live screenshot. That CSS doesn't reach
+inside `cpugraph`/`systemload`/`netload`'s own internal rendering
+(checked their real binaries directly for a "hide label" property;
+none found for the latter two, unlike `cpugraph`), so a small,
+non-expanding separator plugin between `cpugraph` and `systemload`
+covers that gap instead — the same idea tried between `systemload` and
+`netload` hit a real, reproducible rendering bug instead (`netload`'s
+own text split apart, part of it relocating to the far right of the
+whole bar, confirmed directly in a live screenshot), so that
+placement was dropped rather than shipped broken. The bar's own
+`size` also went from 30px to 34px for a bit more vertical room.
+
 A full-width panel's corners sit exactly at the screen edge, where a
 border-radius has no room to visibly curve, so the top bar (full
 width) renders perfectly square regardless, while the shrink-wrapped
