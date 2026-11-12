@@ -84,3 +84,17 @@ x11-xserver-utils
 # murrine rendering engine involved despite the project's README
 # listing it as a requirement.
 sassc
+
+# fonts-nerd-symbols -- without this, Powerlevel10k's "rainbow" preset
+# renders as missing-glyph boxes instead of its signature look. That
+# preset sets POWERLEVEL9K_MODE=nerdfont-complete (confirmed by reading
+# the actual preset file, not assumed), which needs ~3000 Private-Use-
+# Area glyphs (segment separators, folder/git/lock icons) that plain
+# Fira Code doesn't contain (confirmed directly: the real shipped
+# fonts-firacode .ttf has only 23 PUA codepoints total, not the full
+# icon set). This package is a fontconfig-level fallback specifically
+# for this -- confirmed its shipped config already aliases "Fira Code"/
+# "Fira Code Medium" (our configured MonospaceFontName) to fall back to
+# it automatically, with the activating symlink already present in the
+# package itself, not something this hook needs to wire up.
+fonts-nerd-symbols

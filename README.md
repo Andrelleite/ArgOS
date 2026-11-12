@@ -36,7 +36,7 @@ diagram is aspirational.
 │ DESKTOP / UI  (optional -- the live session boots straight into this)    │
 │   lightdm (autologin) → Xfce session → Whisker Menu (kali-menu)          │
 │   Theme: ArgOS (GTK3 + xfwm4, macOS-like, built from WhiteSur-gtk-theme)  │
-│     Flat-Remix-Red-Dark icon accent -- static xfconf-perchannel XML      │
+│     Flat-Remix-Blue-Dark icons -- static xfconf-perchannel XML           │
 │   Panel: cpugraph · systemload · netload · sensors · tool-finder search  │
 │     (argos-setup-panel-widgets / argos-setup-toolfinder-launcher,        │
 │      added once via `xfce4-panel --add=`)                                │
@@ -438,7 +438,18 @@ Per direct request:
   as any other build-time dependency, just not from `kali.download`.
   Applies to both `argos` and `root` — confirmed the clone and the
   rainbow preset are what's actually expected by cloning and reading it
-  directly before writing this, not from memory.
+  directly before writing this, not from memory. **Found while building
+  an accurate mockup of the terminal for this README, not by guessing**:
+  the rainbow preset sets `POWERLEVEL9K_MODE=nerdfont-complete`, which
+  needs thousands of Private-Use-Area glyphs (segment separators,
+  folder/git/lock icons) that plain Fira Code doesn't contain (the real
+  shipped font has only 23 PUA codepoints, confirmed by inspecting its
+  cmap directly) — without a Nerd Font, the real terminal would show
+  missing-glyph boxes instead of the preset's actual look.
+  `fonts-nerd-symbols` (added to `desktop.list.chroot`) fixes this as a
+  fontconfig-level fallback rather than a font swap: its shipped config
+  already aliases "Fira Code"/"Fira Code Medium" (this project's
+  configured `MonospaceFontName`) to fall back to it automatically.
 - **Browser: Chromium. Terminal: Terminator.**
   `config/hooks/normal/0170-set-default-apps.hook.chroot` sets both via
   two mechanisms, since different things check different ones:
@@ -574,21 +585,61 @@ touched was still winning:
 
 ![ArgOS theme concept mockup — terminal and file-manager windows with rounded corners, left-side traffic-light buttons, and a red accent on a dark background](assets/argos-theme-mockup.png)
 
-**This is a mockup, not a real screenshot.** This sandbox can't run the
-actual compiled theme (no real display stack, and executing a freshly
-cloned project's own install script here is intentionally restricted)
-— so rather than show nothing, or claim a photo that doesn't exist,
-this is an HTML/CSS mockup built from the real, verified specifics:
-the actual `argos-panel-menu` icon, the actual shipped default
-wallpaper, and the exact colors confirmed from WhiteSur's own SCSS
-source (`#ED5F5D` accent, `#1f1f1f`/`#282828` dark-mode backgrounds —
-not guessed), rendered with Playwright. Rounded window corners,
-left-side traffic-light buttons, and panel layout are all real,
-shipped specifics, not artistic license. What it can't show: actual
-font rendering, real window-manager behavior, or whether everything
-actually looks this clean once genuinely booted — that's still what
-the next real build and boot confirms, same honest caveat as
-everywhere else in this section.
+**This is a mockup, not a real screenshot** — this sandbox can't run
+the actual compiled theme (no real display stack, and executing a
+freshly cloned project's own install script here is intentionally
+restricted). First pass at this mockup used CSS approximations for
+several things (button shapes, icon colors, font, terminal prompt);
+asked directly whether it was faithful, the honest answer was no, so
+it was rebuilt using the real asset files instead of redrawing them:
+
+- **Traffic-light buttons** — the actual `close-active.png`/
+  `hide-active.png`/`maximize-active.png` PNGs from WhiteSur's own
+  `assets-Dark` set, not CSS circles.
+- **Folder/file icons** — the real `Flat-Remix-Blue-Dark` SVGs, not
+  generic colored squares. This also caught a real mistake in the
+  *actual build*, not just the mockup: `Flat-Remix-Red-Dark`
+  (previously configured as the icon theme) turns out to
+  `Inherits=Flat-Remix-Blue-Dark` for everything except a handful of
+  Kali-specific app icons (confirmed by reading its `index.theme`
+  directly) — so folders would have rendered blue regardless, with
+  only a few menu icons tinted red. The claimed "visual coherence"
+  wasn't real. Fixed by switching `IconThemeName` to
+  `Flat-Remix-Blue-Dark` outright, the theme actually in effect either
+  way.
+- **The terminal prompt** — the real `p10k-rainbow` preset's actual
+  segment structure (`dir` + `vcs`, powerline-style colored blocks with
+  triangle separators, not a generic "user on host in dir" guess),
+  with colors read from the preset file itself (`#3465A4` dir
+  background, `#4e9a06` clean-vcs background) and the real triangle
+  separator glyphs rendered with the real Nerd Fonts symbol font. That
+  last part surfaced a second real, previously-undiscovered bug: the
+  `rainbow` preset sets `POWERLEVEL9K_MODE=nerdfont-complete`, which
+  needs thousands of Private-Use-Area glyphs that plain Fira Code
+  doesn't contain (confirmed directly — the real shipped font has only
+  23 PUA codepoints total). Without a Nerd Font, the real terminal
+  would have shown missing-glyph boxes instead of icons, not the
+  polished look the preset is designed for. Fixed by adding
+  `fonts-nerd-symbols` (`desktop.list.chroot`) — a fontconfig-level
+  fallback, not a replacement font, whose shipped config already
+  aliases "Fira Code"/"Fira Code Medium" to it.
+- **Window chrome** — the real 28px title-bar height, `#373737`
+  title-bar color, and ~10px corner radius, read from the actual
+  theme/asset files rather than chosen by eye. **Terminal
+  background/text colors** (`#000000`/`#aaaaaa`) are Terminator's own
+  real shipped defaults, confirmed from its source
+  (`terminatorlib/config.py`), not the GTK theme's colors.
+- **Fonts** — the real Cantarell, Fira Code, and Nerd Fonts symbol
+  files, loaded directly rather than whatever Chromium's headless
+  environment had on hand.
+
+What it still can't show: whether everything actually looks this
+clean once genuinely booted, real window-manager interaction
+behavior, or the exact anti-aliasing/hinting a real Xorg session
+produces — that's still what the next real build and boot confirms,
+same honest caveat as everywhere else in this section. But unlike the
+first pass, every pixel here traces back to a real file this project
+actually ships or builds, not an approximation.
 
 Window chrome, buttons, menus, and scrollbars are ArgOS's own too — not
 just the wallpaper/icons/login background. Per direct request for a
@@ -650,15 +701,20 @@ override
 autostart script, which would repeat the exact race-condition class of
 bug already found and fixed in `argos-set-wallpaper`.
 
-The icon accent stays `Flat-Remix-Red-Dark` for now (already a free
-win from the previous pass — ships in the already-installed
-`kali-themes-common` package, no new dependency) rather than also
-pulling in a separate `WhiteSur-icon-theme` build, which would be a
-reasonable follow-up for full visual consistency (macOS-style rounded
-"squircle" icons) but is a second project/build to verify, not bundled
-into this pass. The login screen (`lightdm-gtk-greeter.conf`) sets the
-matching `theme-name` too, so it isn't the one surface still showing a
-different theme.
+The icon theme is `Flat-Remix-Blue-Dark` — correcting an earlier,
+wrong claim from the previous pass that `Flat-Remix-Red-Dark` gave
+"visual coherence" with the red window theme. It doesn't: reading its
+`index.theme` directly shows `Inherits=Flat-Remix-Blue-Dark` for
+everything except a handful of Kali-specific app icons, so folders
+would have rendered blue regardless of which of the two was
+configured. Pointing `IconThemeName` at the theme actually in effect
+is more honest than a name that implies a red accent it doesn't
+deliver. A separate `WhiteSur-icon-theme` build (macOS-style rounded
+"squircle" icons, genuinely red-capable) would be a reasonable
+follow-up for full visual consistency, but is a second project/build
+to verify, not bundled into this pass. The login screen
+(`lightdm-gtk-greeter.conf`) sets the matching `icon-theme-name` too,
+so it isn't the one surface still showing a different theme.
 
 Exact color values are whatever WhiteSur's own built-in "red" preset
 renders — close in spirit to the brand red used in Plymouth/GRUB/wallpapers
