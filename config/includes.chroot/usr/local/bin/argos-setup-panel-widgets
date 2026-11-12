@@ -1,51 +1,23 @@
 #!/bin/sh
 set -eu
 #
-# Defines ArgOS's own four-panel layout (replacing whatever
+# Defines ArgOS's own two-panel layout (replacing whatever
 # kali-desktop-xfce ships by default) to match the macOS-style look
-# built in 0185/0186: three independently-anchored top panels that
-# together read as one menu bar (menu + tool-finder search anchored
-# top-left, a clock anchored top-center, system-monitoring widgets +
-# status-icon cluster anchored top-right), and a bottom panel hosting
-# a real dock-style taskbar, nothing else.
+# built in 0185/0186: one continuous top bar (menu + tool-finder
+# search left, status icons left-of-center, a clock near-centered,
+# system-monitoring widgets right -- like a macOS menu bar) and a
+# bottom panel hosting a real dock-style taskbar, nothing else.
 #
-# Three separate panels, not one bar with expanding separators on
-# each side of the clock, because that was tried first and doesn't
-# actually center the clock: GTK's box layout splits leftover space
-# between the two expanding separators EQUALLY regardless of how much
-# fixed-width content sits on each side, so with (as here) much more
-# content on the right (status icons + metrics) than the left (menu +
-# tool-finder), the clock ends up visibly off-center, shifted toward
-# the lighter side by half the imbalance -- confirmed directly
-# (sandbox screenshot, not just worked out on paper) before switching
-# to separately-anchored panels, which anchor exactly regardless of
-# how much content is on either side.
-#
-# The "p=" position codes for this came from testing every value
-# 1-12 individually against a shrink-wrapped single-plugin panel, not
-# assumed from any position's name or recalled from memory -- an
-# earlier attempt to recall the right codes from a C enum was wrong
-# (confirmed directly: the guessed codes didn't match what actually
-# rendered). (p=6 in particular was assumed, from much earlier in
-# this project, to mean "plain top, spans full width" -- it doesn't;
-# it's top-left, and only ever looked like plain-top because it was
-# always paired with length=100%, which fills the top edge either way
-# regardless of which corner it's anchored from.)
-#
-# That per-position testing isn't the whole story, though: with
-# MULTIPLE panels defined together, xfce4-panel apparently groups
-# some position codes into shared "slots" and bumps the loser
-# somewhere else entirely, rather than just rendering both at their
-# literal requested spot -- confirmed directly, not assumed, when
-# panel-1 (p=6) and a second panel set to the code that alone tested
-# as "top-center" (p=8) together put the second panel at
-# BOTTOM-LEFT, nowhere near top-center, even though each looked
-# correct tested alone. p=9 -- which also tested as "top-center"
-# alone -- turned out to be a genuinely different slot that doesn't
-# collide with p=6, confirmed by testing panel-1+panel-2+panel-3
-# together (and then all four, with the dock) and checking the actual
-# rendered positions each time a panel was added, not stopping at
-# "it worked with one panel so it'll work combined."
+# This replaces an earlier, now-reverted design that used three
+# independently-anchored top panels instead of one bar, specifically
+# to get the clock exactly centered (GTK's two-expanding-separator
+# technique doesn't center correctly when the content on each side is
+# a different width -- confirmed directly, covered below). That
+# technically worked, but per direct, pointed feedback it looked
+# broken -- three separate floating pills with visible gaps between
+# them, not one cohesive bar -- which matters more than pixel-perfect
+# centering. Back to one panel; the clock is close to centered, not
+# exact (see below for why, and what was tried).
 #
 # The tool-finder launcher plugin (originally a separate script,
 # argos-setup-toolfinder-launcher, now removed) is defined here too,
@@ -71,8 +43,8 @@ set -eu
 # version of this script warned about -- but it's pinned to the
 # xfce4-panel version kali-desktop-xfce actually ships, same as any
 # other hardcoded assumption in this project, and is the only way to
-# get a deterministic two-panel layout rather than editing whatever
-# default panel-1 already happens to contain.)
+# get a deterministic layout rather than editing whatever default
+# panel-1 already happens to contain.)
 #
 # Guarded by a marker file: this only runs once ever (per user). This
 # redefines panels/plugins wholesale rather than adding to an
@@ -109,16 +81,34 @@ xq() {
     xfconf-query -c xfce4-panel "$@"
 }
 
-xq -p /panels --create -t int -s 1 -t int -s 2 -t int -s 3 -t int -s 4 --force-array
+xq -p /panels --create -t int -s 1 -t int -s 2 --force-array
 
-# --- Panel 1: top-left -- menu + tool-finder search ---------------------
+# --- Panel 1: one continuous top bar ------------------------------------
 
 xq -p /panels/panel-1/position --create -t string -s "p=6;x=0;y=0"
-xq -p /panels/panel-1/length --create -t int -s 10
-xq -p /panels/panel-1/length-adjust --create -t bool -s true
-xq -p /panels/panel-1/size --create -t int -s 26
+xq -p /panels/panel-1/length --create -t int -s 100
+xq -p /panels/panel-1/length-adjust --create -t bool -s false
+xq -p /panels/panel-1/size --create -t int -s 30
 xq -p /panels/panel-1/position-locked --create -t bool -s true
-xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 --force-array
+
+# Two expanding separators (plugin-2 and plugin-8), one on each side
+# of the clock, is the real, standard Xfce technique for a centered
+# panel item -- GTK's box layout splits the leftover space between
+# expanding children equally, so the clock sits in the middle of
+# whatever's left after the fixed-width items on each side. This only
+# actually centers the clock in the whole bar if those fixed-width
+# sides are close to equal width, though -- confirmed directly
+# (sandbox screenshot) that putting everything except the clock on
+# the right (menu+search on the left, status+metrics on the right)
+# put the clock visibly off-center, shifted toward the lighter
+# (left) side. Moving the status-icon cluster to the left side,
+# alongside the menu, cut that offset roughly in half (confirmed by
+# re-measuring, not assumed to have helped) -- not exact, but close,
+# and it keeps the bar as one real piece instead of three floating
+# panels with visible gaps, which matters more per direct feedback.
+xq -p /panels/panel-1/plugin-ids --create -t int -s 1 -t int -s 7 -t int -s 3 \
+    -t int -s 4 -t int -s 5 -t int -s 2 -t int -s 6 -t int -s 8 -t int -s 12 \
+    -t int -s 13 -t int -s 14 --force-array
 
 xq -p /plugins/plugin-1 --create -t string -s "whiskermenu"
 xq -p /plugins/plugin-7 --create -t string -s "launcher"
@@ -131,31 +121,32 @@ xq -p /plugins/plugin-7 --create -t string -s "launcher"
 # already-tested order the old argos-setup-toolfinder-launcher script
 # used for this exact property, is the order that actually works.
 xq -p /plugins/plugin-7/items -t string -s "argos-toolfinder-gui.desktop" --create --force-array
+xq -p /plugins/plugin-3 --create -t string -s "indicator"
+xq -p /plugins/plugin-4 --create -t string -s "pulseaudio"
+xq -p /plugins/plugin-5 --create -t string -s "power-manager-plugin"
+xq -p /plugins/plugin-2 --create -t string -s "separator"
+xq -p /plugins/plugin-2/expand --create -t bool -s true
+xq -p /plugins/plugin-2/style --create -t int -s 0
 
-# --- Panel 2: top-center -- clock, exactly centered regardless of ------
-# --- how much content panel-1/panel-3 end up with -----------------------
-
-xq -p /panels/panel-2/position --create -t string -s "p=9;x=0;y=0"
-xq -p /panels/panel-2/length --create -t int -s 10
-xq -p /panels/panel-2/length-adjust --create -t bool -s true
-xq -p /panels/panel-2/size --create -t int -s 26
-xq -p /panels/panel-2/position-locked --create -t bool -s true
-xq -p /panels/panel-2/plugin-ids --create -t int -s 6 --force-array
-
+# Clock: "mode" 2 is Digital (0=Analog,1=Binary,2=Digital,3=Fuzzy,
+# 4=LCD -- confirmed from the plugin's own real GtkBuilder widget
+# strings, not guessed), "digital-layout" 3 is "Time Only" (the other
+# three options stack date and time on two lines, which is what
+# rendered -- unformatted, per direct feedback -- before this was set
+# at all; this script never configured the clock previously).
+# "digital-time-format" (not "digital-format", confirmed directly --
+# the latter is silently ignored in Time-Only mode, caught by
+# checking the rendered panel after setting it, not assumed from the
+# property existing) is the real strftime-style format string "Time
+# Only" mode actually reads.
 xq -p /plugins/plugin-6 --create -t string -s "clock"
+xq -p /plugins/plugin-6/mode --create -t int -s 2
+xq -p /plugins/plugin-6/digital-layout --create -t int -s 3
+xq -p /plugins/plugin-6/digital-time-format -t string -s "%a %d %b  %H:%M" --create
 
-# --- Panel 3: top-right -- system metrics + status-icon cluster --------
-# Moved here from the bottom dock panel per direct request: that
-# panel is docklike-only now, a real app dock, not also a metrics bar.
-
-xq -p /panels/panel-3/position --create -t string -s "p=1;x=0;y=0"
-xq -p /panels/panel-3/length --create -t int -s 10
-xq -p /panels/panel-3/length-adjust --create -t bool -s true
-xq -p /panels/panel-3/size --create -t int -s 26
-xq -p /panels/panel-3/position-locked --create -t bool -s true
-xq -p /panels/panel-3/plugin-ids --create -t int -s 12 -t int -s 13 -t int -s 14 \
-    -t int -s 3 -t int -s 4 -t int -s 5 --force-array
-
+xq -p /plugins/plugin-8 --create -t string -s "separator"
+xq -p /plugins/plugin-8/expand --create -t bool -s true
+xq -p /plugins/plugin-8/style --create -t int -s 0
 xq -p /plugins/plugin-12 --create -t string -s "cpugraph"
 xq -p /plugins/plugin-13 --create -t string -s "systemload"
 xq -p /plugins/plugin-14 --create -t string -s "netload"
@@ -166,29 +157,27 @@ xq -p /plugins/plugin-14 --create -t string -s "netload"
 # limitation of the sandbox (no real hwmon/ACPI thermal sensors in a
 # container), not proof it's useless on real hardware or even a real
 # VM -- same honest distinction as the compositing/shadow questions
-# elsewhere in this project. Dropped anyway per the "too blended and
-# rough" feedback this was part of: fewer, more legible widgets,
-# rather than one more that might just be visually empty.
-xq -p /plugins/plugin-3 --create -t string -s "indicator"
-xq -p /plugins/plugin-4 --create -t string -s "pulseaudio"
-xq -p /plugins/plugin-5 --create -t string -s "power-manager-plugin"
+# elsewhere in this project.
 
-# --- Panel 4: bottom dock, docklike only --------------------------------
+# --- Panel 2: bottom dock, docklike only --------------------------------
 
 # p=10 confirmed directly (sandbox test) to render at the bottom,
 # centered. Per direct request, this is a real dock, not a second
 # full-width bar: length-adjust=true + a small base length (10%, not
 # 100%) makes the panel shrink-wrap to whatever its plugins actually
-# need instead of stretching edge-to-edge. The rounded-pill look this
-# enables comes from a GTK CSS rule in 0185-install-argos-gtk-theme's
-# gtk-3.0/gtk.css, not an xfconf property -- xfce4-panel has no
-# corner-radius property of its own.
-xq -p /panels/panel-4/position --create -t string -s "p=10;x=0;y=0"
-xq -p /panels/panel-4/length --create -t int -s 10
-xq -p /panels/panel-4/length-adjust --create -t bool -s true
-xq -p /panels/panel-4/size --create -t int -s 42
-xq -p /panels/panel-4/position-locked --create -t bool -s true
-xq -p /panels/panel-4/plugin-ids --create -t int -s 10 --force-array
+# need instead of stretching edge-to-edge. size=64 (taller than the
+# first attempt's 42, per direct feedback that it looked too small)
+# gives it real visual presence even before anything is pinned. The
+# rounded, translucent "glass" look this enables comes from a GTK CSS
+# rule in 0185-install-argos-gtk-theme's gtk-3.0/gtk.css, not an
+# xfconf property -- xfce4-panel has no corner-radius or transparency
+# property of its own.
+xq -p /panels/panel-2/position --create -t string -s "p=10;x=0;y=0"
+xq -p /panels/panel-2/length --create -t int -s 10
+xq -p /panels/panel-2/length-adjust --create -t bool -s true
+xq -p /panels/panel-2/size --create -t int -s 64
+xq -p /panels/panel-2/position-locked --create -t bool -s true
+xq -p /panels/panel-2/plugin-ids --create -t int -s 10 --force-array
 
 xq -p /plugins/plugin-10 --create -t string -s "docklike"
 

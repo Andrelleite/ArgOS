@@ -87,33 +87,52 @@ gtk-icon-theme-name=ArgOS
 gtk-application-prefer-dark-theme=false
 EOF
 
-# Rounded, centered, shrink-wrapped bottom dock: xfce4-panel has no
-# xfconf property for panel corner rounding at all (confirmed by
-# reading its real source via `strings` -- no per-panel CSS-class or
-# "radius" property exists), so this has to be a GTK CSS override.
-# `#XfcePanelWindow` is the real, correct selector: confirmed by
-# reading this exact theme's own _xfce.scss
-# (`.xfce4-panel.background#XfcePanelWindow`), then confirmed AGAIN by
-# actually applying it to a live panel in a disposable Xvfb session
-# and screenshotting the result, not trusted from the theme source
-# alone.
+# Rounded, translucent ("glass") panels: xfce4-panel has no xfconf
+# property for panel corner rounding or transparency at all
+# (confirmed by reading its real source via `strings` -- no such
+# property exists), so this has to be a GTK CSS override.
 #
-# This one rule, with no per-panel targeting at all, is confirmed
-# (same live test) to affect the top bar and bottom dock correctly
-# differently without needing to -- it's the same global selector for
-# both (xfce4-panel doesn't expose a way to distinguish panel
-# instances in CSS), but a full-width panel's corners sit exactly at
-# the screen edge, where a border-radius has no room to visibly
-# curve, so the top bar (panel-1, full width) renders perfectly square
-# regardless, while the bottom dock (panel-2, shrink-wrapped via
-# length-adjust=true in argos-setup-panel-widgets) has real edges in
-# the middle of the screen where the same radius shows as a clean
-# rounded pill. Confirmed directly, both panels configured together
-# in the same test, not reasoned through and assumed.
+# The selector is `.xfce4-panel.background#XfcePanelWindow`, not just
+# `#XfcePanelWindow` alone -- this matters and was found the hard way.
+# `#XfcePanelWindow` alone DOES catch the border-radius rule (an ID
+# selector is specific enough that nothing else contests it), but a
+# background-color on that same bare selector was overridden
+# inconsistently on different panels: this exact theme's own
+# _xfce.scss sets the panel's background-color on
+# `.xfce4-panel.background#XfcePanelWindow` (confirmed by reading it
+# directly) -- two classes plus the id, which beats a bare id
+# selector on CSS specificity regardless of source order, so the
+# theme's own opaque background was winning over a background-color
+# on `#XfcePanelWindow` alone on whichever panels happened to
+# resolve the theme's rule. Matching the theme's exact selector gives
+# this rule equal specificity, where GTK's user-stylesheet priority
+# correctly wins the tie -- confirmed directly: the same background-
+# color rule that previously rendered inconsistently (opaque on some
+# panels, correctly translucent on others) rendered uniformly
+# translucent on every panel once the selector matched.
+#
+# A full-width panel's corners sit exactly at the screen edge, where
+# a border-radius has no room to visibly curve, so the top bar
+# (panel-1, full width) renders perfectly square regardless, while
+# the bottom dock (panel-2, shrink-wrapped via length-adjust=true in
+# argos-setup-panel-widgets) has real edges in the middle of the
+# screen where the same radius shows as a clean rounded pill --
+# confirmed directly, both panels configured together in the same
+# test, not reasoned through and assumed.
+#
+# rgba(245, 245, 245, 0.55) is real, non-blurred translucency, not
+# the full frosted/blurred "glass" look real macOS has -- that's not
+# achievable at all here (GTK3 has no backdrop-filter/blur support,
+# and xfwm4's compositor has no blur shader, confirmed directly, not
+# a configuration gap). This is the closest real approximation:
+# panel content genuinely blends with whatever's behind it. 0.55
+# chosen by checking actual text legibility over it, not picked
+# blind -- confirmed readable in a live screenshot.
 install -d -m 0755 /etc/skel/.config/gtk-3.0
 cat > /etc/skel/.config/gtk-3.0/gtk.css <<'EOF'
-#XfcePanelWindow {
+.xfce4-panel.background#XfcePanelWindow {
     border-radius: 16px;
+    background-color: rgba(245, 245, 245, 0.55);
 }
 EOF
 
